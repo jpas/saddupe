@@ -127,6 +127,7 @@ func StartSpoofing(host *BtAddr) (*Spoof, error) {
 
 	cmds := [][]string{
 		[]string{"power", "off"},
+		[]string{"le", "off"},
 		[]string{"name", "Pro Controller"},
 		[]string{"linksec", "off"},
 		[]string{"class", "5", "8"},
