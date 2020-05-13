@@ -31,8 +31,6 @@ func NewBtAddr(addr string) (*BtAddr, error) {
 	}
 
 	a := BtAddr(b)
-	fmt.Println(a.String())
-	fmt.Println(a.Bytes())
 	return &a, nil
 }
 
@@ -75,7 +73,6 @@ func (a L2Addr) Sockaddr() unix.Sockaddr {
 		Addr: a.Addr,
 		PSM:  a.PSM,
 	}
-	fmt.Println(sa)
 	return unix.Sockaddr(sa)
 }
 
