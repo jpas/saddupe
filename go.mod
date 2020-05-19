@@ -8,4 +8,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v0.0.7
 	golang.org/x/sys v0.0.0-20200331124033-c3d80250170d
+	golang.org/x/tools v0.0.0-20200515010526-7d3b6ebf133d // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )

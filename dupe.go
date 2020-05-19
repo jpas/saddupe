@@ -1,34 +1,31 @@
 package main
 
 import (
+	"io"
 	"log"
+
+	"github.com/jpas/saddupe/l2"
+	"github.com/pkg/errors"
 )
 
 type Dupe struct {
-	ctrl *L2Socket
-	intr *L2Socket
+	ctrl io.Closer
+	intr io.ReadWriteCloser
 }
 
-func NewDupe(addr *BtAddr) (*Dupe, error) {
-	ctrl, err := NewL2Socket()
+func NewDupe(console string) (*Dupe, error) {
+	ctrl, err := l2.NewConn(console, 17)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unable to open control channel")
 	}
 
-	if err := ctrl.Connect(&L2Addr{*addr, 17}); err != nil {
-		return nil, err
-	}
-
-	intr, err := NewL2Socket()
+	intr, err := l2.NewConn(console, 19)
 	if err != nil {
-		return nil, err
+		ctrl.Close()
+		return nil, errors.Wrap(err, "unable to open interrupt channel")
 	}
 
-	if err := intr.Connect(&L2Addr{*addr, 19}); err != nil {
-		return nil, err
-	}
-
-	return &Dupe{ctrl, intr}, nil
+	return &Dupe{io.Closer(ctrl), io.ReadWriteCloser(intr)}, nil
 }
 
 func (d *Dupe) Run() {

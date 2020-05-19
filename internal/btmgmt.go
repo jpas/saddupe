@@ -3,17 +3,20 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	"github.com/pkg/errors"
 	"io"
 	"os/exec"
 	"regexp"
 	"strconv"
+
+	"github.com/pkg/errors"
 )
 
+// Btmgmt is a btmgmt interface for a specific Bluetooth controller
 type Btmgmt struct {
 	index string
 }
 
+// NewBtmgmt constructs a btmgmt interface for a controller with a given address
 func NewBtmgmt(addr string) (*Btmgmt, error) {
 	var bt Btmgmt
 
@@ -34,7 +37,8 @@ func NewBtmgmt(addr string) (*Btmgmt, error) {
 	return &Btmgmt{index}, nil
 }
 
-func (bt *Btmgmt) Run(args ...string) (string, error) {
+// Run executes the given command with btmgmt
+func (bt Btmgmt) Run(args ...string) (string, error) {
 	a := args
 	if bt.index != "" {
 		a = append([]string{"--index", bt.index}, a...)
@@ -65,7 +69,7 @@ func (bt *Btmgmt) Run(args ...string) (string, error) {
 		buf.WriteRune('\n')
 	}
 
-	return string(buf.Bytes()), nil
+	return buf.String(), nil
 }
 
 var addrIndexPattern = regexp.MustCompile(`hci(\d+?):.+?\n\taddr ([:[:xdigit:]]+)`)
@@ -156,6 +160,7 @@ func (e btmgmtError) Error() string {
 	return string(e)
 }
 
+// Errors for each btmgmt error
 const (
 	ErrUnknownCommand       = btmgmtError("unknown command")
 	ErrNotConnected         = btmgmtError("not connected")

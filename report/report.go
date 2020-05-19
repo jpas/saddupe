@@ -27,6 +27,10 @@ type CommandCallHeader struct {
 	CommandID byte
 }
 
+type OutputHeader struct {
+	Seqno uint8
+}
+
 // Remote procedure call with piggyback rumble.
 type RawOutput0x01 struct {
 	*CommandCallHeader
