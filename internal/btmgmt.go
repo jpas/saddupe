@@ -154,33 +154,27 @@ func parseError(b []byte) error {
 	}
 }
 
-type btmgmtError string
-
-func (e btmgmtError) Error() string {
-	return string(e)
-}
-
 // Errors for each btmgmt error
-const (
-	ErrUnknownCommand       = btmgmtError("unknown command")
-	ErrNotConnected         = btmgmtError("not connected")
-	ErrFailed               = btmgmtError("failed")
-	ErrConnectFailed        = btmgmtError("connect failed")
-	ErrAuthenticationFailed = btmgmtError("authentication failed")
-	ErrNotPaired            = btmgmtError("not paired")
-	ErrNoResources          = btmgmtError("no resources")
-	ErrTimeout              = btmgmtError("timeout")
-	ErrAlreadyConnected     = btmgmtError("already connected")
-	ErrBusy                 = btmgmtError("busy")
-	ErrRejected             = btmgmtError("rejected")
-	ErrNotSupported         = btmgmtError("not supported")
-	ErrInvalidParameters    = btmgmtError("invalid parameters")
-	ErrDisconnected         = btmgmtError("disconnected")
-	ErrNotPowered           = btmgmtError("not powered")
-	ErrCancelled            = btmgmtError("cancelled")
-	ErrInvalidIndex         = btmgmtError("invalid index")
-	ErrRFKilled             = btmgmtError("rfkilled")
-	ErrAlreadyPaired        = btmgmtError("already paired")
-	ErrPermissionDenied     = btmgmtError("permission denied")
-	ErrUnknownErrorCode     = btmgmtError("unknown error code")
+var (
+	ErrUnknownCommand       = errors.New("unknown command")
+	ErrNotConnected         = errors.New("not connected")
+	ErrFailed               = errors.New("failed")
+	ErrConnectFailed        = errors.New("connect failed")
+	ErrAuthenticationFailed = errors.New("authentication failed")
+	ErrNotPaired            = errors.New("not paired")
+	ErrNoResources          = errors.New("no resources")
+	ErrTimeout              = errors.New("timeout")
+	ErrAlreadyConnected     = errors.New("already connected")
+	ErrBusy                 = errors.New("busy")
+	ErrRejected             = errors.New("rejected")
+	ErrNotSupported         = errors.New("not supported")
+	ErrInvalidParameters    = errors.New("invalid parameters")
+	ErrDisconnected         = errors.New("disconnected")
+	ErrNotPowered           = errors.New("not powered")
+	ErrCancelled            = errors.New("cancelled")
+	ErrInvalidIndex         = errors.New("invalid index")
+	ErrRFKilled             = errors.New("rfkilled")
+	ErrAlreadyPaired        = errors.New("already paired")
+	ErrPermissionDenied     = errors.New("permission denied")
+	ErrUnknownErrorCode     = errors.New("unknown error code")
 )
