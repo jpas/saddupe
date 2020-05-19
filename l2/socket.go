@@ -22,7 +22,11 @@ func newSocket() (*socket, error) {
 }
 
 func (s socket) Send(p []byte) (int, error) {
-	err := unix.Sendto(s.fd, p, 0, nil)
+	sa, err := s.getpeername()
+	if err != nil {
+		return 0, err
+	}
+	err = unix.Sendto(s.fd, p, 0, sa)
 	if err != nil {
 		return 0, err
 	}
@@ -71,8 +75,12 @@ func (s socket) Getsockname() (*Addr, error) {
 	return l2AddrFromSockaddr(sa), nil
 }
 
+func (s socket) getpeername() (unix.Sockaddr, error) {
+	return unix.Getpeername(s.fd)
+}
+
 func (s socket) Getpeername() (*Addr, error) {
-	sa, err := unix.Getpeername(s.fd)
+	sa, err := s.getpeername()
 	if err != nil {
 		return nil, err
 	}
