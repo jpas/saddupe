@@ -10,9 +10,6 @@ type Listener struct {
 	addr *Addr
 }
 
-// BluezInputBindHack toggles the restarting of the bluetooth service so that we may bind
-var BluezInputBindHack = false
-
 // NewListener returns a net.Listener for L2CAP connections
 func NewListener(mac string, psm uint16) (net.Listener, error) {
 	var s *socket
