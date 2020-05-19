@@ -20,7 +20,12 @@ func main() {
 }
 
 func rootRun(cmd *cobra.Command, args []string) {
-	console := "B8:8A:EC:44:7E:AA"
+	if len(args) == 0 {
+		fatal(nil)
+	}
+
+	console := args[0]
+	// console := "B8:8A:EC:44:7E:AA"
 	dupe, err := NewDupe(console)
 	if err != nil {
 		fatal(err)
@@ -44,7 +49,11 @@ func pairRun(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	host := "80:32:53:37:22:19"
+	if len(args) == 0 {
+		fatal(nil)
+	}
+
+	host := args[0]
 	if err := Pair(host); err != nil {
 		fatal(err)
 	}

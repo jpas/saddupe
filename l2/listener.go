@@ -2,7 +2,6 @@ package l2
 
 import (
 	"net"
-	"os/exec"
 )
 
 // Listener implements net.Listener for Bluetooth L2CAP, can be used to accept pair requests from another Blueooth device.
@@ -12,7 +11,7 @@ type Listener struct {
 }
 
 // BluezInputBindHack toggles the restarting of the bluetooth service so that we may bind
-var BluezInputBindHack = true
+var BluezInputBindHack = false
 
 // NewListener returns a net.Listener for L2CAP connections
 func NewListener(mac string, psm uint16) (net.Listener, error) {
@@ -26,14 +25,6 @@ func NewListener(mac string, psm uint16) (net.Listener, error) {
 	s, err = newSocket()
 	if err != nil {
 		return nil, err
-	}
-
-	if BluezInputBindHack {
-		// restart bluetooth.service
-		if err := exec.Command("systemctl", "restart", "bluetooth").Run(); err != nil {
-			s.Close()
-			return nil, err
-		}
 	}
 
 	if err := s.Bind(addr); err != nil {

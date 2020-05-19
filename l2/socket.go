@@ -86,12 +86,16 @@ func (s socket) Getpeername() (*Addr, error) {
 func sockaddrL2FromAddr(addr *Addr) *unix.SockaddrL2 {
 	sa := &unix.SockaddrL2{PSM: addr.PSM}
 	for i := 0; i < 6; i++ {
-		sa.Addr[i] = addr.MAC[5-i]
+		sa.Addr[i] = addr.MAC[i]
 	}
 	return sa
 }
 
 func l2AddrFromSockaddr(sa unix.Sockaddr) *Addr {
 	l2sa := sa.(*unix.SockaddrL2)
-	return &Addr{MAC: l2sa.Addr, PSM: l2sa.PSM}
+	addr := &Addr{PSM: l2sa.PSM}
+	for i := 0; i < 6; i++ {
+		addr.MAC[i] = l2sa.Addr[5-i]
+	}
+	return addr
 }
