@@ -1,6 +1,7 @@
 package l2
 
 import (
+	"io"
 	"net"
 	"time"
 
@@ -12,7 +13,13 @@ type Conn struct {
 	s          *socket
 	localAddr  net.Addr
 	remoteAddr net.Addr
+
+	live bool
 }
+
+var (
+	ErrClosedConn = errors.New("l2: read/write on closed conn")
+)
 
 // NewConn returns a L2CAP connection
 func NewConn(mac string, psm uint16) (net.Conn, error) {
@@ -36,16 +43,40 @@ func NewConn(mac string, psm uint16) (net.Conn, error) {
 		return nil, err
 	}
 
-	return &Conn{s, localAddr, remoteAddr}, nil
+	return newConn(s, localAddr, remoteAddr), nil
+}
+
+func newConn(s *socket, localAddr net.Addr, remoteAddr net.Addr) *Conn {
+	return &Conn{s, localAddr, remoteAddr, true}
 }
 
 // Write reads the next packet from the connection.
 func (c Conn) Read(p []byte) (int, error) {
-	return c.s.Recv(p)
+	if !c.live {
+		return 0, ErrClosedConn
+	}
+
+	n, err := c.s.Recv(p)
+	if err != nil {
+		return 0, err
+	}
+
+	if n == 0 {
+		if err := c.die(); err != nil {
+			return 0, err
+		}
+		return 0, io.EOF
+	}
+
+	return n, nil
 }
 
 // Write sends the packet p through the connection.
 func (c Conn) Write(p []byte) (int, error) {
+	if !c.live {
+		return 0, ErrClosedConn
+	}
+
 	return c.s.Send(p)
 }
 
@@ -54,6 +85,16 @@ func (c *Conn) Close() error {
 	if c == nil {
 		return nil
 	}
+
+	if !c.live {
+		return nil
+	}
+
+	return c.die()
+}
+
+func (c Conn) die() error {
+	c.live = false
 	return c.s.Close()
 }
 
