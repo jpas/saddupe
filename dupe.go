@@ -3,6 +3,9 @@ package main
 import (
 	"io"
 	"log"
+	"time"
+
+	"github.com/jpas/saddupe/packet"
 
 	"github.com/jpas/saddupe/l2"
 	"github.com/pkg/errors"
@@ -29,6 +32,8 @@ func NewDupe(console string) (*Dupe, error) {
 }
 
 func (d *Dupe) Run() {
+	go d.tick()
+
 	var buf [1024]byte
 	for {
 		n, err := d.intr.Read(buf[:])
@@ -36,5 +41,23 @@ func (d *Dupe) Run() {
 			panic(err)
 		}
 		log.Printf("recv: %v", buf[:n])
+	}
+}
+
+func (d *Dupe) tick() {
+	var p packet.SimpleButtonStatus
+
+	for {
+		b, err := p.Pack()
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = d.intr.Write(b)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(500 * time.Millisecond)
 	}
 }
