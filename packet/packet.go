@@ -5,9 +5,8 @@ import (
 )
 
 var (
-	ErrTooShort      = errors.New("packet: buffer too short")
-	ErrUnknownPacket = errors.New("packet: packet format unknown")
-	ErrUnknownButton = errors.New("packet: unknown button")
+	ErrTooShort  = errors.New("packet: buffer too short")
+	ErrMalformed = errors.New("packet: packet malformed")
 )
 
 type Packet interface {
@@ -37,13 +36,13 @@ const (
 	OutputPacketID PacketID = 0xA200
 )
 
-type Unpacker func([]byte) (*Packet, error)
+type Unpacker func([]byte) (Packet, error)
 
 var (
 	Unpackers = make(map[PacketID]Unpacker)
 )
 
-func Unpack(p []byte) (*Packet, error) {
+func Unpack(p []byte) (Packet, error) {
 	id, err := unpackPacketID(p)
 	if err != nil {
 		return nil, err
@@ -51,24 +50,7 @@ func Unpack(p []byte) (*Packet, error) {
 
 	unpacker, ok := Unpackers[id]
 	if !ok {
-		return nil, ErrUnknownPacket
+		return nil, errors.Errorf("packet: unknown packet id: %04x", id)
 	}
 	return unpacker(p)
-}
-
-func boolsToBits(bools ...bool) uint64 {
-	var bits uint64
-
-	if bools == nil {
-		return bits
-	}
-
-	bit := uint64(1)
-	for offset := 0; offset < len(bools) && offset < 64; offset++ {
-		if bools[offset] {
-			bits |= bit
-		}
-		bit = bit << 1
-	}
-	return bits
 }
