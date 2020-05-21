@@ -33,7 +33,9 @@ func rootRun(cmd *cobra.Command, args []string) {
 		fatal(err)
 	}
 
-	dupe.Run()
+	if err := dupe.Run(); err != nil {
+		fatal(err)
+	}
 }
 func fatal(err error) {
 	fmt.Printf("%#v\n", err)
