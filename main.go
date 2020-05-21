@@ -28,39 +28,13 @@ func rootRun(cmd *cobra.Command, args []string) {
 		console = args[0]
 	}
 
-	dupe, err := NewDupe(console)
+	dupe, err := NewDupeBluetooth(console)
 	if err != nil {
 		fatal(err)
 	}
+
 	dupe.Run()
 }
-
-var pairCmd = &cobra.Command{
-	Use:   "pair",
-	Short: "Pairs with a alternating device over Bluetooth",
-	Run:   pairRun,
-}
-
-func init() {
-	rootCmd.AddCommand(pairCmd)
-}
-
-func pairRun(cmd *cobra.Command, args []string) {
-	if os.Geteuid() != 0 {
-		fmt.Println("please run as root")
-		os.Exit(1)
-	}
-
-	if len(args) == 0 {
-		fatal(nil)
-	}
-
-	host := args[0]
-	if err := Pair(host); err != nil {
-		fatal(err)
-	}
-}
-
 func fatal(err error) {
 	fmt.Printf("%#v\n", err)
 	os.Exit(1)

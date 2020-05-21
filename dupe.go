@@ -1,46 +1,40 @@
 package main
 
 import (
-	"io"
 	"log"
 	"time"
 
+	"github.com/jpas/saddupe/hid"
 	"github.com/jpas/saddupe/packet"
 
-	"github.com/jpas/saddupe/l2"
 	"github.com/pkg/errors"
 )
 
 type Dupe struct {
-	ctrl io.Closer
-	intr io.ReadWriteCloser
+	dev *hid.Device
 }
 
-func NewDupe(console string) (*Dupe, error) {
-	ctrl, err := l2.NewConn(console, 17)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to open control channel")
-	}
+func NewDupe(dev *hid.Device) (*Dupe, error) {
+	return &Dupe{dev}, nil
+}
 
-	intr, err := l2.NewConn(console, 19)
+func NewDupeBluetooth(console string) (*Dupe, error) {
+	dev, err := hid.Dial("bt", console)
 	if err != nil {
-		ctrl.Close()
-		return nil, errors.Wrap(err, "unable to open interrupt channel")
+		return nil, errors.Wrap(err, "unable to connect to console")
 	}
-
-	return &Dupe{io.Closer(ctrl), io.ReadWriteCloser(intr)}, nil
+	return NewDupe(dev)
 }
 
 func (d *Dupe) Run() {
 	go d.tick()
 
-	var buf [1024]byte
 	for {
-		n, err := d.intr.Read(buf[:])
+		r, err := d.dev.Read()
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("recv: %v", buf[:n])
+		log.Printf("report received: %+v", r)
 	}
 }
 
@@ -48,12 +42,12 @@ func (d *Dupe) tick() {
 	var p packet.SimpleButtonStatus
 
 	for {
-		b, err := p.Pack()
+		r, err := p.Report()
 		if err != nil {
 			panic(err)
 		}
 
-		_, err = d.intr.Write(b)
+		err = d.dev.Write(r)
 		if err != nil {
 			panic(err)
 		}
