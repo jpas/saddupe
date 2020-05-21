@@ -127,17 +127,17 @@ func parseError(b []byte) error {
 		return ErrTimeout
 	case 0x09:
 		return ErrAlreadyConnected
-	case 0x0A:
+	case 0x0a:
 		return ErrBusy
-	case 0x0B:
+	case 0x0b:
 		return ErrRejected
-	case 0x0C:
+	case 0x0c:
 		return ErrNotSupported
-	case 0x0D:
+	case 0x0d:
 		return ErrInvalidParameters
-	case 0x0E:
+	case 0x0e:
 		return ErrDisconnected
-	case 0x0F:
+	case 0x0f:
 		return ErrNotPowered
 	case 0x10:
 		return ErrCancelled

@@ -3,7 +3,7 @@ package packet
 import "github.com/jpas/saddupe/hid"
 
 const (
-	SimpleButtonStatusID  PacketID = 0x3F
+	SimpleButtonStatusID  PacketID = 0x3f
 	SimpleButtonStatusLen int      = 12
 )
 
