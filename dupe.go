@@ -18,7 +18,7 @@ func NewDupe(dev *hid.Device) (*Dupe, error) {
 	return &Dupe{dev}, nil
 }
 
-func NewDupeBluetooth(console string) (*Dupe, error) {
+func NewBtDupe(console string) (*Dupe, error) {
 	dev, err := hid.Dial("bt", console)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to connect to console")

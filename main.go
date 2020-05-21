@@ -28,7 +28,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 		console = args[0]
 	}
 
-	dupe, err := NewDupeBluetooth(console)
+	dupe, err := NewBtDupe(console)
 	if err != nil {
 		fatal(err)
 	}

@@ -3,35 +3,18 @@ package hid
 import (
 	"io"
 
-	"github.com/jpas/saddupe/hid/internal/l2"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
 
 type Device struct {
-	control   *Channel
-	interrupt *Channel
+	control   io.ReadWriteCloser
+	interrupt io.ReadWriteCloser
 	MAC       [6]byte
 }
 
-func NewDevice(control, interrupt io.ReadWriteCloser, mac string) (*Device, error) {
-	addr, err := l2.NewAddr(mac, 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid mac")
-	}
-
-	ctrl, err := NewChannel(control, MinimumMTU)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to wrap control channel")
-	}
-
-	intr, err := NewChannel(interrupt, MinimumMTU)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to wrap interrupt channel")
-	}
-
-	return &Device{ctrl, intr, addr.MAC}, nil
+func NewDevice(control, interrupt io.ReadWriteCloser, mac [6]byte) (*Device, error) {
+	return &Device{control, interrupt, mac}, nil
 }
 
 func (d Device) Close() error {
@@ -52,9 +35,15 @@ func (d Device) Close() error {
 
 // Ignore control channel for now, but might be needed later
 func (d Device) Read() (*Report, error) {
-	return d.interrupt.Read()
+	var b [1024]byte // hopefully this is big enough
+	n, err := d.interrupt.Read(b[:])
+	if err != nil {
+		return nil, err
+	}
+	return NewReport(b[:n])
 }
 
 func (d Device) Write(r *Report) error {
-	return d.interrupt.Write(r)
+	_, err := d.interrupt.Write(r.Bytes())
+	return err
 }
