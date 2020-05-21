@@ -9,7 +9,7 @@ import (
 
 // Addr implements net.Addr for L2CAP Addresses
 type Addr struct {
-	MAC *MAC
+	MAC MAC
 	PSM uint16
 }
 
@@ -19,7 +19,7 @@ func NewAddr(mac string, psm uint16) (*Addr, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Addr{m, psm}, nil
+	return &Addr{*m, psm}, nil
 }
 
 func (a *Addr) String() string {

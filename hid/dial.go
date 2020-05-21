@@ -27,5 +27,5 @@ func BtDial(mac string) (*Device, error) {
 
 	lmac := (interrupt.LocalAddr()).(*l2.Addr).MAC
 
-	return &Device{control, interrupt, *lmac}, nil
+	return &Device{control, interrupt, lmac}, nil
 }
