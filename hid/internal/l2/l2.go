@@ -38,11 +38,12 @@ func ParseMAC(mac string) (*MAC, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to parse MAC address")
 	}
-	if len(hw) != 6 {
+
+	var m MAC
+	if len(hw) != len(m) {
 		return nil, errors.Errorf("invalid MAC address: %s", mac)
 	}
-	var m MAC
-	for i := 0; i < 6; i++ {
+	for i := 0; i < len(m); i++ {
 		m[i] = hw[i]
 	}
 
