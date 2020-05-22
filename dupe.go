@@ -12,11 +12,12 @@ import (
 )
 
 type Dupe struct {
-	dev *hid.Device
+	dev     *hid.Device
+	returns chan packet.Ret
 }
 
 func NewDupe(dev *hid.Device) (*Dupe, error) {
-	return &Dupe{dev}, nil
+	return &Dupe{dev, make(chan packet.Ret)}, nil
 }
 
 func NewBtDupe(console string) (*Dupe, error) {
@@ -25,6 +26,63 @@ func NewBtDupe(console string) (*Dupe, error) {
 		return nil, errors.Wrap(err, "unable to connect to console")
 	}
 	return NewDupe(dev)
+}
+
+func (d *Dupe) send(p packet.Packet) error {
+	if p.Header() != hid.InputReportHeader {
+		return errors.New("not an input report")
+	}
+	log.Printf("send: %#+v", p)
+	r, err := packet.EncodeReport(p)
+	if err != nil {
+		return errors.Wrap(err, "packet encode failed")
+	}
+	return d.dev.Write(r)
+}
+
+func (d *Dupe) recv() (packet.Packet, error) {
+	r, err := d.dev.Read()
+	if err != nil {
+		return nil, errors.Wrap(err, "read failed")
+	}
+
+	if r.Header != hid.OutputReportHeader {
+		return nil, errors.New("not an output report")
+	}
+
+	p, err := packet.DecodeReport(r)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("recv: %#+v", p)
+
+	return p, nil
+}
+
+func (d *Dupe) handlePacket(p packet.Packet) error {
+	switch p := p.(type) {
+	case *packet.CmdPacket:
+		return d.handleCmd(p.Cmd)
+
+	}
+	return nil
+}
+
+func (d *Dupe) handleCmd(c packet.Cmd) error {
+	switch c := c.(type) {
+	case *packet.CmdDeviceInfo:
+		_ = c
+		ret := &packet.RetDeviceInfo{
+			Kind:     0x03, // hard coded pro controller
+			MAC:      d.dev.MAC,
+			HasColor: false,
+		}
+		d.returns <- ret
+	case *packet.CmdShipmentState:
+		d.returns <- &packet.RetAck{c.Op()}
+	}
+	return nil
 }
 
 func (d *Dupe) Run() error {
@@ -42,31 +100,35 @@ func (d Dupe) reader(stop <-chan struct{}) error {
 		case <-stop:
 			return nil
 		default:
-			r, err := d.dev.Read()
+			p, err := d.recv()
 			if err != nil {
-				return errors.Wrap(err, "read failed")
+				return err
 			}
-			log.Printf("report received: %+v", r)
+
+			err = d.handlePacket(p)
+			if err != nil {
+				log.Printf("handler failed: %s", err)
+				continue
+			}
+
 		}
 	}
 }
 
 func (d Dupe) ticker(stop <-chan struct{}) error {
-	var p packet.SimpleButtonStatus
-
 	for {
 		select {
 		case <-stop:
 			return nil
-		case <-time.After(500 * time.Millisecond):
-			r, err := p.Report()
-			if err != nil {
-				panic(err)
+		case ret := <-d.returns:
+			p := &packet.RetPacket{State: nil, Ret: ret}
+			if err := d.send(p); err != nil {
+				return err
 			}
-
-			err = d.dev.Write(r)
-			if err != nil {
-				panic(err)
+		case <-time.After(1 * time.Second):
+			p := &packet.BasicStatePacket{}
+			if err := d.send(p); err != nil {
+				return err
 			}
 		}
 	}

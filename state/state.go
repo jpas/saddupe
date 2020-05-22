@@ -1,13 +1,33 @@
-package packet
+package state
 
-import "github.com/jpas/saddupe/hid"
+type State struct {
+	Tick     uint64
+	Battery  BatteryState
+	Charging bool
+	HasGrip  bool
+	Powered  bool
 
-const (
-	SimpleButtonStatusID  PacketID = 0x3f
-	SimpleButtonStatusLen int      = 12
-)
+	Buttons    ButtonsState
+	LeftStick  StickState
+	RightStick StickState
+	Vibration  VibrationState
+}
 
-type SimpleButtonStatus struct {
+type BatteryState struct{}
+type StickState struct{}
+type ButtonsState struct{}
+type VibrationState struct{}
+
+func (s *State) Encode() ([]byte, error) {
+	b := [12]byte{}
+	return b[:], nil
+}
+
+func (s *State) Decode([]byte) error {
+	return nil
+}
+
+type BasicState struct {
 	Up, Down, Left, Right      bool
 	SL, SR, LR, ZLR            bool
 	Minus, Plus, Home, Capture bool
@@ -33,17 +53,3 @@ const (
 	HatLeftUp    HatDirection = 0x01
 	HatUpLeft    HatDirection = 0x01
 )
-
-func (s SimpleButtonStatus) Report() (*hid.Report, error) {
-	p := [SimpleButtonStatusLen]byte{
-		byte(SimpleButtonStatusID),
-		boolsToByte(s.Down, s.Right, s.Left, s.Up, s.SL, s.SR, false, false),
-		boolsToByte(s.Minus, s.Plus, s.LeftStick, s.RightStick, s.Home, s.Capture, s.LR, s.ZLR),
-		byte(0x08 - (s.Hat & 0x0f)),
-		0x00, 0x80,
-		0x00, 0x80,
-		0x00, 0x80,
-		0x00, 0x80,
-	}
-	return hid.NewInputReport(p[:]), nil
-}

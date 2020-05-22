@@ -40,7 +40,7 @@ func (d Device) Read() (*Report, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewReport(b[:n])
+	return NewReport(ReportHeader(b[0]), b[1:n])
 }
 
 func (d Device) Write(r *Report) error {
