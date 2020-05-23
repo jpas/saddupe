@@ -15,12 +15,14 @@ import (
 type Dupe struct {
 	dev     *hid.Device
 	state   state.State
+	flash   *Flash
 	returns chan packet.Ret
 }
 
 func NewDupe(dev *hid.Device) (*Dupe, error) {
 	d := &Dupe{
 		dev:     dev,
+		flash:   NewFlash(),
 		returns: make(chan packet.Ret),
 	}
 	return d, nil
@@ -94,7 +96,7 @@ func (d *Dupe) handleCmd(c packet.Cmd) error {
 		d.returns <- packet.NewRetAck(c.Op(), true)
 	case *packet.CmdFlashRead:
 		data := make([]byte, c.Len)
-		if err := d.FlashRead(data, c.Addr, c.Len); err != nil {
+		if err := d.flash.Read(data, c.Addr, c.Len); err != nil {
 			d.returns <- packet.NewRetAck(c.Op(), false)
 			break
 		}
@@ -102,13 +104,10 @@ func (d *Dupe) handleCmd(c packet.Cmd) error {
 	case *packet.CmdSetMode:
 		d.state.Mode = c.Mode
 		d.returns <- packet.NewRetAck(c.Op(), c.Mode == state.FullMode)
+	case *packet.CmdButtonTime:
+		d.returns <- &packet.RetButtonTime{L: 20, R: 20}
 	}
 
-	return nil
-}
-
-func (d *Dupe) FlashRead(b []byte, addr uint32, len int) error {
-	log.Printf("flash read at %08x (%d)", addr, len)
 	return nil
 }
 
