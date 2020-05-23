@@ -27,11 +27,13 @@ func RegisterPacket(p Packet) {
 	packets[packetDecoderKey{p.Header(), p.ID()}] = p
 }
 
+var ErrUnknownPacket = errors.New("packet: unknown packet")
+
 func DecodeReport(r *hid.Report) (Packet, error) {
 	key := packetDecoderKey{r.Header, PacketID(r.Payload[0])}
 	target, ok := packets[key]
 	if !ok {
-		return nil, errors.Errorf("no decoder for key: %02x %02x", key.Header, key.ID)
+		return nil, errors.Wrapf(ErrUnknownPacket, "unknown packet key: %02x %02x", key.Header, key.ID)
 	}
 
 	packet, err := decode(r.Payload, target)

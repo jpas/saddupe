@@ -46,7 +46,7 @@ func (p *CmdPacket) Decode(b []byte) error {
 	op := OpCode(b[10])
 	target, ok := cmds[op]
 	if !ok {
-		return errors.Errorf("no decoder for opcode: %02x", op)
+		return errors.Wrapf(ErrUnknownPacket, "unknown opcode: %02x", op)
 	}
 
 	cmd, err := decode(b[10:], target)

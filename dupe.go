@@ -5,19 +5,25 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jpas/saddupe/hid"
 	"github.com/jpas/saddupe/packet"
-
+	"github.com/jpas/saddupe/state"
 	"github.com/pkg/errors"
 )
 
 type Dupe struct {
 	dev     *hid.Device
+	state   state.State
 	returns chan packet.Ret
 }
 
 func NewDupe(dev *hid.Device) (*Dupe, error) {
-	return &Dupe{dev, make(chan packet.Ret)}, nil
+	d := &Dupe{
+		dev:     dev,
+		returns: make(chan packet.Ret),
+	}
+	return d, nil
 }
 
 func NewBtDupe(console string) (*Dupe, error) {
@@ -32,7 +38,7 @@ func (d *Dupe) send(p packet.Packet) error {
 	if p.Header() != hid.InputReportHeader {
 		return errors.New("not an input report")
 	}
-	log.Printf("send: %#+v", p)
+	log.Printf("send: %s", spew.Sdump(p))
 	r, err := packet.EncodeReport(p)
 	if err != nil {
 		return errors.Wrap(err, "packet encode failed")
@@ -55,7 +61,7 @@ func (d *Dupe) recv() (packet.Packet, error) {
 		return nil, err
 	}
 
-	log.Printf("recv: %#+v", p)
+	log.Printf("recv: %s", spew.Sdump(p))
 
 	return p, nil
 }
@@ -80,17 +86,16 @@ func (d *Dupe) handleCmd(c packet.Cmd) error {
 		}
 		d.returns <- ret
 	case *packet.CmdShipmentState:
-		d.returns <- &packet.RetAck{c.Op()}
+		d.returns <- &packet.RetAck{TheOp: c.Op()}
 	}
 	return nil
 }
 
 func (d *Dupe) Run() error {
 	defer d.dev.Close()
-
 	return runAll(
 		d.reader,
-		d.ticker,
+		d.writer,
 	)
 }
 
@@ -101,6 +106,11 @@ func (d Dupe) reader(stop <-chan struct{}) error {
 			return nil
 		default:
 			p, err := d.recv()
+			if errors.Is(err, packet.ErrUnknownPacket) {
+				log.Println(err)
+				continue
+			}
+
 			if err != nil {
 				return err
 			}
@@ -110,26 +120,25 @@ func (d Dupe) reader(stop <-chan struct{}) error {
 				log.Printf("handler failed: %s", err)
 				continue
 			}
-
 		}
 	}
 }
 
-func (d Dupe) ticker(stop <-chan struct{}) error {
+func (d Dupe) writer(stop <-chan struct{}) error {
 	for {
+		var p packet.Packet
+		d.state.Tick += 1
+
 		select {
 		case <-stop:
 			return nil
 		case ret := <-d.returns:
-			p := &packet.RetPacket{State: nil, Ret: ret}
-			if err := d.send(p); err != nil {
-				return err
-			}
-		case <-time.After(1 * time.Second):
-			p := &packet.BasicStatePacket{}
-			if err := d.send(p); err != nil {
-				return err
-			}
+			p = &packet.RetPacket{State: d.state, Ret: ret}
+		case <-time.After(500 * time.Millisecond):
+			p = &packet.FullStatePacket{State: d.state}
+		}
+		if err := d.send(p); err != nil {
+			return err
 		}
 	}
 }

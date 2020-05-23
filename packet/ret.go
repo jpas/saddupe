@@ -1,15 +1,13 @@
 package packet
 
 import (
-	"fmt"
-
 	"github.com/jpas/saddupe/hid"
 	"github.com/jpas/saddupe/state"
 	"github.com/pkg/errors"
 )
 
 type RetPacket struct {
-	State *state.State
+	State state.State
 	Ret   Ret
 }
 
@@ -50,8 +48,6 @@ func (p *RetPacket) Encode() ([]byte, error) {
 
 	b[14] = byte(p.Ret.Op())
 
-	fmt.Println(b)
-
 	return b[:], nil
 }
 
@@ -59,7 +55,7 @@ func (p *RetPacket) Decode(b []byte) error {
 	op := OpCode(b[10])
 	target, ok := rets[op]
 	if !ok {
-		return errors.Errorf("no decoder for opcode: %02x", op)
+		return errors.Wrapf(ErrUnknownPacket, "unknown opcode: %02x", op)
 	}
 
 	ret, err := decode(b[10:], target)
@@ -68,12 +64,10 @@ func (p *RetPacket) Decode(b []byte) error {
 	}
 	p.Ret = (ret).(Ret)
 
-	var s state.State
-	err = s.Decode(b[1:])
+	err = p.State.Decode(b[1:])
 	if err != nil {
 		return errors.Wrap(err, "status decode faild")
 	}
-	p.State = &s
 
 	return nil
 }
