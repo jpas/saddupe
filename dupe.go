@@ -2,10 +2,10 @@ package main
 
 import (
 	"log"
+	"reflect"
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jpas/saddupe/hid"
 	"github.com/jpas/saddupe/packet"
 	"github.com/jpas/saddupe/state"
@@ -41,12 +41,6 @@ func (d *Dupe) send(p packet.Packet) error {
 		return errors.New("not an input report")
 	}
 
-	switch p.(type) {
-	case *packet.FullStatePacket:
-	default:
-		log.Printf("send: %s", spew.Sdump(p))
-	}
-
 	r, err := packet.EncodeReport(p)
 	if err != nil {
 		return errors.Wrap(err, "packet encode failed")
@@ -69,7 +63,14 @@ func (d *Dupe) recv() (packet.Packet, error) {
 		return nil, err
 	}
 
-	log.Printf("recv: %s", spew.Sdump(p))
+	switch t := p.(type) {
+	case *packet.RumblePacket:
+		// do nothing, just spammy
+	case *packet.CmdPacket:
+		log.Printf("recv: %s %s", reflect.TypeOf(p), reflect.TypeOf(t.Cmd))
+	default:
+		log.Printf("recv: %s", reflect.TypeOf(p))
+	}
 
 	return p, nil
 }
