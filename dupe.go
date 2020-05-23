@@ -38,7 +38,13 @@ func (d *Dupe) send(p packet.Packet) error {
 	if p.Header() != hid.InputReportHeader {
 		return errors.New("not an input report")
 	}
-	log.Printf("send: %s", spew.Sdump(p))
+
+	switch p.(type) {
+	case *packet.FullStatePacket:
+	default:
+		log.Printf("send: %s", spew.Sdump(p))
+	}
+
 	r, err := packet.EncodeReport(p)
 	if err != nil {
 		return errors.Wrap(err, "packet encode failed")
@@ -70,7 +76,6 @@ func (d *Dupe) handlePacket(p packet.Packet) error {
 	switch p := p.(type) {
 	case *packet.CmdPacket:
 		return d.handleCmd(p.Cmd)
-
 	}
 	return nil
 }
@@ -86,8 +91,24 @@ func (d *Dupe) handleCmd(c packet.Cmd) error {
 		}
 		d.returns <- ret
 	case *packet.CmdShipmentState:
-		d.returns <- &packet.RetAck{TheOp: c.Op()}
+		d.returns <- packet.NewRetAck(c.Op(), true)
+	case *packet.CmdFlashRead:
+		data := make([]byte, c.Len)
+		if err := d.FlashRead(data, c.Addr, c.Len); err != nil {
+			d.returns <- packet.NewRetAck(c.Op(), false)
+			break
+		}
+		d.returns <- &packet.RetFlashRead{Addr: c.Addr, Data: data}
+	case *packet.CmdSetMode:
+		d.state.Mode = c.Mode
+		d.returns <- packet.NewRetAck(c.Op(), c.Mode == state.FullMode)
 	}
+
+	return nil
+}
+
+func (d *Dupe) FlashRead(b []byte, addr uint32, len int) error {
+	log.Printf("flash read at %08x (%d)", addr, len)
 	return nil
 }
 
@@ -107,7 +128,7 @@ func (d Dupe) reader(stop <-chan struct{}) error {
 		default:
 			p, err := d.recv()
 			if errors.Is(err, packet.ErrUnknownPacket) {
-				log.Println(err)
+				log.Printf("recv failed: %s", err)
 				continue
 			}
 
@@ -134,11 +155,11 @@ func (d Dupe) writer(stop <-chan struct{}) error {
 			return nil
 		case ret := <-d.returns:
 			p = &packet.RetPacket{State: d.state, Ret: ret}
-		case <-time.After(500 * time.Millisecond):
+		case <-time.After(time.Second / 60):
 			p = &packet.FullStatePacket{State: d.state}
 		}
 		if err := d.send(p); err != nil {
-			return err
+			return errors.Wrap(err, "send failed")
 		}
 	}
 }

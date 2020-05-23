@@ -1,11 +1,14 @@
 package state
 
 type State struct {
-	Tick     uint64
+	Tick uint64
+	Mode Mode
+
 	Battery  BatteryState
 	Charging bool
-	HasGrip  bool
 	Powered  bool
+
+	HasGrip bool
 
 	Buttons    ButtonsState
 	LeftStick  StickState
@@ -52,4 +55,16 @@ const (
 	HatLeft      HatDirection = 0x02
 	HatLeftUp    HatDirection = 0x01
 	HatUpLeft    HatDirection = 0x01
+)
+
+type Mode byte
+
+const (
+	ActiveNFCIRMode0 Mode = 0x00
+	ActiveNFCIRMode1 Mode = 0x01
+	ActiveNFCIRMode2 Mode = 0x02
+	ActiveNFCIRMode3 Mode = 0x03
+	FullMode         Mode = 0x30
+	NFCMode          Mode = 0x31
+	BasicMode        Mode = 0x3f
 )

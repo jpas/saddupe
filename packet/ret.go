@@ -88,15 +88,20 @@ func RegisterRet(r Ret) {
 }
 
 type RetAck struct {
-	TheOp OpCode
+	op  OpCode
+	ack bool
+}
+
+func NewRetAck(op OpCode, ack bool) *RetAck {
+	return &RetAck{op, ack}
 }
 
 func (r *RetAck) Op() OpCode {
-	return r.TheOp
+	return r.op
 }
 
 func (r *RetAck) Ack() bool {
-	return true
+	return r.ack
 }
 
 func (r *RetAck) Type() byte {
@@ -108,6 +113,7 @@ func (r *RetAck) Encode() ([]byte, error) {
 }
 
 func (r *RetAck) Decode(b []byte) error {
-	r.TheOp = OpCode(b[0])
+	r.op = OpCode(b[0])
+	r.ack = true
 	return nil
 }
