@@ -30,7 +30,10 @@ func (s socket) Send(p []byte) (int, error) {
 	}
 	for {
 		err = unix.Sendto(s.fd, p, 0, sa)
-		if isBadErr(err) {
+		if errors.Is(err, unix.EINTR) {
+			continue
+		}
+		if err != nil {
 			return 0, err
 		}
 		return len(p), nil
@@ -40,7 +43,10 @@ func (s socket) Send(p []byte) (int, error) {
 func (s socket) Recv(p []byte) (int, error) {
 	for {
 		n, _, err := unix.Recvfrom(s.fd, p, 0)
-		if isBadErr(err) {
+		if errors.Is(err, unix.EINTR) {
+			continue
+		}
+		if err != nil {
 			return 0, err
 		}
 		return n, err
@@ -50,10 +56,11 @@ func (s socket) Recv(p []byte) (int, error) {
 func (s socket) Connect(addr *Addr) error {
 	sa := sockaddrL2FromAddr(addr)
 	for {
-		if err := unix.Connect(s.fd, sa); isBadErr(err) {
-			return err
+		err := unix.Connect(s.fd, sa)
+		if errors.Is(err, unix.EINTR) {
+			continue
 		}
-		return nil
+		return err
 	}
 }
 
@@ -69,7 +76,10 @@ func (s socket) Bind(addr *Addr) error {
 func (s socket) Accept() (*socket, *Addr, error) {
 	for {
 		fd, sa, err := unix.Accept(s.fd)
-		if isBadErr(err) {
+		if errors.Is(err, unix.EINTR) {
+			continue
+		}
+		if err != nil {
 			return nil, nil, err
 		}
 		return &socket{fd}, l2AddrFromSockaddr(sa), nil
@@ -122,8 +132,4 @@ func l2AddrFromSockaddr(sa unix.Sockaddr) *Addr {
 		addr.MAC[i] = l2sa.Addr[5-i]
 	}
 	return addr
-}
-
-func isBadErr(err error) bool {
-	return err != nil && !errors.Is(err, unix.EINTR)
 }
