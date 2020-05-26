@@ -37,6 +37,7 @@ func rootRun(cmd *cobra.Command, args []string) {
 		fatal(err)
 	}
 }
+
 func fatal(err error) {
 	fmt.Printf("%#v\n", err)
 	os.Exit(1)

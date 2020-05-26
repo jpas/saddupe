@@ -46,7 +46,7 @@ func (r *RetButtonTime) Ack() bool {
 }
 
 func (r *RetButtonTime) Type() byte {
-	return 0x10
+	return 0x03
 }
 
 func (r *RetButtonTime) Encode() ([]byte, error) {

@@ -23,6 +23,8 @@ type VibrationState struct{}
 
 func (s *State) Encode() ([]byte, error) {
 	b := [12]byte{}
+	b[0] = byte(s.Tick)
+	b[1] = 0x8E
 	return b[:], nil
 }
 

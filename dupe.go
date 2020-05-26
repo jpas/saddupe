@@ -92,7 +92,7 @@ func (d *Dupe) handleCmd(c packet.Cmd) error {
 			HasColor: false,
 		}
 		d.returns <- ret
-	case *packet.CmdShipmentState:
+	case *packet.CmdShipmentState, *packet.CmdEnableVibration, *packet.CmdEnableSixaxis:
 		d.returns <- packet.NewRetAck(c.Op(), true)
 	case *packet.CmdFlashRead:
 		data := make([]byte, c.Len)
@@ -119,7 +119,7 @@ func (d *Dupe) Run() error {
 	)
 }
 
-func (d Dupe) reader(stop <-chan struct{}) error {
+func (d *Dupe) reader(stop <-chan struct{}) error {
 	for {
 		select {
 		case <-stop:
@@ -144,7 +144,7 @@ func (d Dupe) reader(stop <-chan struct{}) error {
 	}
 }
 
-func (d Dupe) writer(stop <-chan struct{}) error {
+func (d *Dupe) writer(stop <-chan struct{}) error {
 	for {
 		var p packet.Packet
 		d.state.Tick += 1
@@ -154,7 +154,7 @@ func (d Dupe) writer(stop <-chan struct{}) error {
 			return nil
 		case ret := <-d.returns:
 			p = &packet.RetPacket{State: d.state, Ret: ret}
-		case <-time.After(time.Second / 60):
+		case <-time.After(15 * time.Millisecond):
 			p = &packet.FullStatePacket{State: d.state}
 		}
 		if err := d.send(p); err != nil {

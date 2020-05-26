@@ -21,6 +21,7 @@ func (c *CmdDeviceInfo) Decode([]byte) error {
 }
 
 type RetDeviceInfo struct {
+	Firmware [2]byte
 	MAC      [6]byte
 	Kind     byte
 	HasColor bool
@@ -43,18 +44,21 @@ func (r *RetDeviceInfo) Type() byte {
 }
 
 func (r *RetDeviceInfo) Encode() ([]byte, error) {
-	b := []byte{
-		0x04, 0x00, // firmware version
-		r.Kind,
-		0x02,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // MAC
-		0x01,
-		byte(boolToBit(r.HasColor, 0)),
-	}
-	copy(b[4:], r.MAC[:])
+	b := make([]byte, 14)
+	putRetHeader(b, r)
+	b[2], b[3] = 0x04, 0x06
+	b[4] = r.Kind
+	b[5] = 0x02
+	copy(b[6:], r.MAC[:])
+	b[12] = 0x01
+	b[13] = byte(boolToBit(r.HasColor, 0))
 	return b, nil
 }
 
 func (r *RetDeviceInfo) Decode(b []byte) error {
+	copy(r.Firmware[:], b[2:])
+	r.Kind = b[4]
+	copy(r.MAC[:], b[6:])
+	r.HasColor = bitIsSet(b[13], 0)
 	return nil
 }
