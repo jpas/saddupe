@@ -1,28 +1,28 @@
 package packet
 
-type CmdShipmentState struct {
+type CmdShipmentStateSet struct {
 	state bool
 }
 
-const CmdShipmentStateOp OpCode = 0x08
+const CmdShipmentStateSetOp OpCode = 0x08
 
 func init() {
-	RegisterCmd(&CmdShipmentState{})
+	RegisterCmd(&CmdShipmentStateSet{})
 }
 
-func (c *CmdShipmentState) Op() OpCode {
-	return CmdShipmentStateOp
+func (c *CmdShipmentStateSet) Op() OpCode {
+	return CmdShipmentStateSetOp
 }
 
-func (c *CmdShipmentState) Encode() ([]byte, error) {
+func (c *CmdShipmentStateSet) Encode() ([]byte, error) {
 	return []byte{byte(boolToBit(c.state, 0))}, nil
 }
 
-func (c *CmdShipmentState) Decode(b []byte) error {
+func (c *CmdShipmentStateSet) Decode(b []byte) error {
 	c.state = b[1] != 0
 	return nil
 }
 
 func init() {
-	RegisterRet(&RetAck{op: CmdShipmentStateOp})
+	RegisterRet(&RetAck{op: CmdShipmentStateSetOp})
 }

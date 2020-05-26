@@ -1,26 +1,26 @@
 package packet
 
-type CmdDeviceInfo struct{}
+type CmdDeviceGetInfo struct{}
 
-const CmdDeviceInfoOp OpCode = 0x02
+const CmdDeviceGetInfoOp OpCode = 0x02
 
 func init() {
-	RegisterCmd(&CmdDeviceInfo{})
+	RegisterCmd(&CmdDeviceGetInfo{})
 }
 
-func (c *CmdDeviceInfo) Op() OpCode {
-	return CmdDeviceInfoOp
+func (c *CmdDeviceGetInfo) Op() OpCode {
+	return CmdDeviceGetInfoOp
 }
 
-func (c *CmdDeviceInfo) Encode() ([]byte, error) {
+func (c *CmdDeviceGetInfo) Encode() ([]byte, error) {
 	return []byte{byte(c.Op())}, nil
 }
 
-func (c *CmdDeviceInfo) Decode([]byte) error {
+func (c *CmdDeviceGetInfo) Decode([]byte) error {
 	return nil
 }
 
-type RetDeviceInfo struct {
+type RetDeviceGetInfo struct {
 	Firmware [2]byte
 	MAC      [6]byte
 	Kind     byte
@@ -28,22 +28,22 @@ type RetDeviceInfo struct {
 }
 
 func init() {
-	RegisterRet(&RetDeviceInfo{})
+	RegisterRet(&RetDeviceGetInfo{})
 }
 
-func (r *RetDeviceInfo) Op() OpCode {
-	return CmdDeviceInfoOp
+func (r *RetDeviceGetInfo) Op() OpCode {
+	return CmdDeviceGetInfoOp
 }
 
-func (r *RetDeviceInfo) Ack() bool {
+func (r *RetDeviceGetInfo) Ack() bool {
 	return true
 }
 
-func (r *RetDeviceInfo) Type() byte {
-	return byte(CmdDeviceInfoOp)
+func (r *RetDeviceGetInfo) Type() byte {
+	return byte(CmdDeviceGetInfoOp)
 }
 
-func (r *RetDeviceInfo) Encode() ([]byte, error) {
+func (r *RetDeviceGetInfo) Encode() ([]byte, error) {
 	b := make([]byte, 14)
 	if err := putRetHeader(b, r); err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (r *RetDeviceInfo) Encode() ([]byte, error) {
 	return b, nil
 }
 
-func (r *RetDeviceInfo) Decode(b []byte) error {
+func (r *RetDeviceGetInfo) Decode(b []byte) error {
 	copy(r.Firmware[:], b[2:])
 	r.Kind = b[4]
 	copy(r.MAC[:], b[6:])
