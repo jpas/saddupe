@@ -38,27 +38,18 @@ func (p *RetPacket) Encode() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "ret encode failed")
 	}
-	copy(b[15:], ret)
-
-	if p.Ret.Ack() {
-		b[13] = 0x80 | p.Ret.Type()&0x7f
-	} else {
-		b[13] = 0x00
-	}
-
-	b[14] = byte(p.Ret.Op())
-
+	copy(b[13:], ret)
 	return b[:], nil
 }
 
 func (p *RetPacket) Decode(b []byte) error {
-	op := OpCode(b[10])
+	op := OpCode(b[14])
 	target, ok := rets[op]
 	if !ok {
-		return errors.Wrapf(ErrUnknownPacket, "unknown opcode: %02x", op)
+		return errors.Wrapf(ErrUnknownPacket, "ret unknown opcode: %02x", op)
 	}
 
-	ret, err := decode(b[10:], target)
+	ret, err := decode(b[13:], target)
 	if err != nil {
 		return errors.Wrap(err, "ret decode failed")
 	}
@@ -77,6 +68,16 @@ type Ret interface {
 	Ack() bool
 	Type() byte
 	EncodeDecoder
+}
+
+func putRetHeader(b []byte, r Ret) error {
+	if r.Ack() {
+		b[0] = 0x80 | byte(r.Type())&0x7f
+	} else {
+		b[0] = 0x00
+	}
+	b[1] = byte(r.Op())
+	return nil
 }
 
 var (
@@ -109,11 +110,16 @@ func (r *RetAck) Type() byte {
 }
 
 func (r *RetAck) Encode() ([]byte, error) {
-	return nil, nil
+	b := make([]byte, 2)
+	err := putRetHeader(b, r)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func (r *RetAck) Decode(b []byte) error {
 	r.op = OpCode(b[0])
-	r.ack = true
+	r.ack = bitIsSet(b[1], 7)
 	return nil
 }

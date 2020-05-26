@@ -1,6 +1,8 @@
 package packet
 
 import (
+	"fmt"
+
 	"github.com/jpas/saddupe/hid"
 	"github.com/jpas/saddupe/state"
 	"github.com/pkg/errors"
@@ -42,7 +44,8 @@ func (p *BasicStatePacket) Encode() ([]byte, error) {
 }
 
 func (p *BasicStatePacket) Decode(b []byte) error {
-	s := p.State
+	fmt.Println(b)
+	s := &p.State
 	if PacketID(b[0]) != p.ID() {
 		return errors.New("invalid id")
 	}
@@ -50,10 +53,10 @@ func (p *BasicStatePacket) Decode(b []byte) error {
 	s.Down, s.Right, s.Left, s.Up, s.SL, s.SR, _, _ = byteToBools(b[1])
 	s.Minus, s.Plus, s.LeftStick, s.RightStick, s.Home, s.Capture, s.LR, s.ZLR = byteToBools(b[2])
 
-	if 0x08 < s.Hat {
+	if 0x08 < b[3] {
 		return errors.New("invalid hat direction")
 	}
-	s.Hat = state.HatDirection(b[0] - 0x08)
+	s.Hat = state.HatDirection(0x08 - b[3])
 
 	return nil
 }
