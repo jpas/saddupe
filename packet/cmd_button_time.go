@@ -51,7 +51,9 @@ func (r *RetButtonTime) Type() byte {
 
 func (r *RetButtonTime) Encode() ([]byte, error) {
 	b := make([]byte, 16)
-	putRetHeader(b, r)
+	if err := putRetHeader(b, r); err != nil {
+		return nil, err
+	}
 	binary.LittleEndian.PutUint16(b[2:], r.L)
 	binary.LittleEndian.PutUint16(b[4:], r.R)
 	binary.LittleEndian.PutUint16(b[6:], r.ZL)

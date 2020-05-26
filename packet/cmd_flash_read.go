@@ -64,7 +64,9 @@ func (r *RetFlashRead) Encode() ([]byte, error) {
 		return nil, errors.Errorf("data must be less than %d bytes", FlashReadMaxLen)
 	}
 	b := make([]byte, 7)
-	putRetHeader(b, r)
+	if err := putRetHeader(b, r); err != nil {
+		return nil, err
+	}
 	binary.LittleEndian.PutUint32(b[2:], r.Addr)
 	b[6] = byte(len(r.Data))
 	return append(b[:], r.Data...), nil

@@ -45,7 +45,9 @@ func (r *RetDeviceInfo) Type() byte {
 
 func (r *RetDeviceInfo) Encode() ([]byte, error) {
 	b := make([]byte, 14)
-	putRetHeader(b, r)
+	if err := putRetHeader(b, r); err != nil {
+		return nil, err
+	}
 	b[2], b[3] = 0x04, 0x06
 	b[4] = r.Kind
 	b[5] = 0x02
