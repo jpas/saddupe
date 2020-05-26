@@ -21,6 +21,10 @@ type StickState struct{}
 type ButtonsState struct{}
 type VibrationState struct{}
 
+func NewState() *State {
+	return &State{}
+}
+
 func (s *State) Encode() ([]byte, error) {
 	b := [12]byte{}
 	b[0] = byte(s.Tick)

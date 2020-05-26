@@ -13,15 +13,16 @@ import (
 
 type Dupe struct {
 	dev     *hid.Device
-	state   state.State
-	flash   *Flash
+	state   *state.State
+	flash   *state.Flash
 	returns chan packet.Ret
 }
 
 func NewDupe(dev *hid.Device) (*Dupe, error) {
 	d := &Dupe{
 		dev:     dev,
-		flash:   NewFlash(),
+		flash:   state.NewFlash(),
+		state:   state.NewState(),
 		returns: make(chan packet.Ret),
 	}
 	return d, nil
@@ -95,9 +96,9 @@ func (d *Dupe) writer(stop <-chan struct{}) error {
 		case <-stop:
 			return nil
 		case ret := <-d.returns:
-			p = &packet.RetPacket{State: d.state, Ret: ret}
+			p = &packet.RetPacket{State: *d.state, Ret: ret}
 		case <-time.After(15 * time.Millisecond):
-			p = &packet.FullStatePacket{State: d.state}
+			p = &packet.FullStatePacket{State: *d.state}
 		}
 		if err := d.send(p); err != nil {
 			return errors.Wrap(err, "send failed")

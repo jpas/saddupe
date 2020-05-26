@@ -1,4 +1,4 @@
-package main
+package state
 
 import "log"
 
@@ -35,10 +35,13 @@ func (f *Flash) Serial() string {
 }
 
 func (f *Flash) SetSerial(s string) {
+	m := f.mem[0x6000:]
 	if s == "" {
-		f.mem[0x6000] = 0x80
+		for i := 0; i < 16; i++ {
+			m[i] = 0xff
+		}
 	}
-	copy(f.mem[0x6000:0x6010], []byte(s))
+	copy(m[:16], []byte(s))
 }
 
 type Color struct {
