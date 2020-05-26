@@ -66,9 +66,9 @@ func (d *Dupe) recv() (packet.Packet, error) {
 	case *packet.RumblePacket:
 		// do nothing, just spammy
 	case *packet.CmdPacket:
-		log.Printf("recv: %s %s", reflect.TypeOf(p), reflect.TypeOf(t.Cmd))
+		log.Printf("recv: %08x %s %s", d.state.Tick, reflect.TypeOf(p), reflect.TypeOf(t.Cmd))
 	default:
-		log.Printf("recv: %s", reflect.TypeOf(p))
+		log.Printf("recv: %08x %s", d.state.Tick, reflect.TypeOf(p))
 	}
 
 	return p, nil
