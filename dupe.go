@@ -89,6 +89,7 @@ func (d *Dupe) recv() (packet.Packet, error) {
 }
 
 func (d *Dupe) writer(stop <-chan struct{}) error {
+	tick := time.After(time.Second / 120)
 	for {
 		var p packet.Packet
 		d.state.Tick += 1
@@ -96,10 +97,11 @@ func (d *Dupe) writer(stop <-chan struct{}) error {
 		select {
 		case <-stop:
 			return nil
+		case <-tick:
+			tick = time.After(time.Second / 120)
+			p = &packet.StatePacket{State: *d.state}
 		case ret := <-d.returns:
 			p = &packet.RetPacket{State: *d.state, Ret: ret}
-		case <-time.After(15 * time.Millisecond):
-			p = &packet.StatePacket{State: *d.state}
 		}
 		if err := d.send(p); err != nil {
 			return errors.Wrap(err, "send failed")
