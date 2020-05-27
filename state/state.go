@@ -1,5 +1,7 @@
 package state
 
+import "time"
+
 type State struct {
 	Tick uint64
 	Mode Mode
@@ -23,6 +25,10 @@ type State struct {
 	Rumble RumbleState
 }
 
+func NewState() *State {
+	return &State{}
+}
+
 type Gamepad byte
 
 type BatteryState struct {
@@ -42,27 +48,35 @@ const (
 
 type Button struct {
 	Pressed bool
+	start   time.Time
+	millis  uint64
 }
 
 func (b *Button) Press() {
+	if !b.Pressed {
+		b.start = time.Now()
+	}
 	b.Pressed = true
 }
 
 func (b *Button) Release() {
+	if b.Pressed {
+		b.millis += uint64(time.Since(b.start).Milliseconds())
+	}
 	b.Pressed = false
 }
 
+func (b *Button) Milliseconds() uint64 {
+	return b.millis
+}
+
 type Stick struct {
-	*Button
+	Button
 	X float64
 	Y float64
 }
 
 type RumbleState struct{}
-
-func NewState() *State {
-	return &State{}
-}
 
 type Mode byte
 

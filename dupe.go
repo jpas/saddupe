@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jpas/saddupe/hid"
 	"github.com/jpas/saddupe/packet"
 	"github.com/jpas/saddupe/state"
@@ -156,12 +155,18 @@ func (d *Dupe) handleCmd(c packet.Cmd) error {
 }
 
 func (d *Dupe) handleCmdAuxSetConfig(c packet.Cmd) (packet.Ret, error) {
-	log.Printf("cmd: %s", spew.Sdump(c))
 	return &packet.RetAuxSetConfig{}, nil
 }
 
 func (d *Dupe) handleCmdButtonTime(c packet.Cmd) (packet.Ret, error) {
-	return &packet.RetButtonTime{L: 20, R: 20}, nil
+	r := &packet.RetButtonTime{
+		L:    uint16(d.state.L.Milliseconds() / 10),
+		R:    uint16(d.state.R.Milliseconds() / 10),
+		ZL:   uint16(d.state.ZL.Milliseconds() / 10),
+		ZR:   uint16(d.state.ZR.Milliseconds() / 10),
+		Home: uint16(d.state.Home.Milliseconds() / 10),
+	}
+	return r, nil
 }
 
 func (d *Dupe) handleCmdDeviceGetInfo(c packet.Cmd) (packet.Ret, error) {
