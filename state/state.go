@@ -47,23 +47,35 @@ const (
 )
 
 type Button struct {
-	Pressed bool
+	pressed bool
 	start   time.Time
 	millis  uint64
 }
 
+func (b *Button) Pressed() bool {
+	return b.pressed
+}
+
+func (b *Button) SetPressed(p bool) {
+	if p {
+		b.Press()
+	} else {
+		b.Release()
+	}
+}
+
 func (b *Button) Press() {
-	if !b.Pressed {
+	if !b.pressed {
 		b.start = time.Now()
 	}
-	b.Pressed = true
+	b.pressed = true
 }
 
 func (b *Button) Release() {
-	if b.Pressed {
+	if b.pressed {
 		b.millis += uint64(time.Since(b.start).Milliseconds())
 	}
-	b.Pressed = false
+	b.pressed = false
 }
 
 func (b *Button) Milliseconds() uint64 {

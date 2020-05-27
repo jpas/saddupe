@@ -53,26 +53,26 @@ func encodeState(b []byte, s *state.State) error {
 		b[1] |= 0x10
 	}
 
-	b[2] |= bit(0, s.Y.Pressed)
-	b[2] |= bit(1, s.X.Pressed)
-	b[2] |= bit(2, s.B.Pressed)
-	b[2] |= bit(3, s.A.Pressed)
-	b[2] |= bit(6, s.R.Pressed)
-	b[2] |= bit(7, s.ZR.Pressed)
+	b[2] |= bit(0, s.Y.Pressed())
+	b[2] |= bit(1, s.X.Pressed())
+	b[2] |= bit(2, s.B.Pressed())
+	b[2] |= bit(3, s.A.Pressed())
+	b[2] |= bit(6, s.R.Pressed())
+	b[2] |= bit(7, s.ZR.Pressed())
 
-	b[3] |= bit(0, s.Minus.Pressed)
-	b[3] |= bit(1, s.Plus.Pressed)
-	b[3] |= bit(2, s.RightStick.Pressed)
-	b[3] |= bit(3, s.LeftStick.Pressed)
-	b[3] |= bit(4, s.Home.Pressed)
-	b[3] |= bit(5, s.Capture.Pressed)
+	b[3] |= bit(0, s.Minus.Pressed())
+	b[3] |= bit(1, s.Plus.Pressed())
+	b[3] |= bit(2, s.RightStick.Pressed())
+	b[3] |= bit(3, s.LeftStick.Pressed())
+	b[3] |= bit(4, s.Home.Pressed())
+	b[3] |= bit(5, s.Capture.Pressed())
 
-	b[4] |= bit(0, s.Down.Pressed)
-	b[4] |= bit(0, s.Up.Pressed)
-	b[4] |= bit(0, s.Right.Pressed)
-	b[4] |= bit(0, s.Left.Pressed)
-	b[4] |= bit(0, s.L.Pressed)
-	b[4] |= bit(0, s.ZL.Pressed)
+	b[4] |= bit(0, s.Down.Pressed())
+	b[4] |= bit(0, s.Up.Pressed())
+	b[4] |= bit(0, s.Right.Pressed())
+	b[4] |= bit(0, s.Left.Pressed())
+	b[4] |= bit(0, s.L.Pressed())
+	b[4] |= bit(0, s.ZL.Pressed())
 
 	return nil
 }
