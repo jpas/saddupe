@@ -14,14 +14,12 @@ import (
 type Dupe struct {
 	dev     *hid.Device
 	state   *state.State
-	flash   *state.Flash
 	returns chan packet.Ret
 }
 
 func NewDupe(dev *hid.Device) (*Dupe, error) {
 	d := &Dupe{
 		dev:     dev,
-		flash:   state.NewFlash(),
 		state:   state.NewState(),
 		returns: make(chan packet.Ret),
 	}
@@ -42,6 +40,10 @@ func (d *Dupe) Run() error {
 		d.reader,
 		d.writer,
 	)
+}
+
+func (d *Dupe) State() *state.State {
+	return d.state
 }
 
 func (d *Dupe) reader(stop <-chan struct{}) error {
@@ -98,7 +100,7 @@ func (d *Dupe) writer(stop <-chan struct{}) error {
 		case ret := <-d.returns:
 			p = &packet.RetPacket{State: *d.state, Ret: ret}
 		case <-time.After(15 * time.Millisecond):
-			p = &packet.FullStatePacket{State: *d.state}
+			p = &packet.StatePacket{State: *d.state}
 		}
 		if err := d.send(p); err != nil {
 			return errors.Wrap(err, "send failed")
@@ -174,7 +176,7 @@ func (d *Dupe) handleCmdDeviceGetInfo(c packet.Cmd) (packet.Ret, error) {
 func (d *Dupe) handleCmdFlashRead(c packet.Cmd) (packet.Ret, error) {
 	cmd := c.(*packet.CmdFlashRead)
 	data := make([]byte, cmd.Len)
-	if err := d.flash.Read(data, cmd.Addr, cmd.Len); err != nil {
+	if err := d.state.Flash.Read(data, cmd.Addr, cmd.Len); err != nil {
 		return nil, errors.Wrap(err, "unable to read flash")
 	}
 	return &packet.RetFlashRead{Addr: cmd.Addr, Data: data}, nil

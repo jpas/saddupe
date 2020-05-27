@@ -28,11 +28,10 @@ func (p *RetPacket) Encode() ([]byte, error) {
 
 	b[0] = byte(p.ID())
 
-	state, err := p.State.Encode()
+	err := encodeState(b[1:], &p.State)
 	if err != nil {
 		return nil, errors.Wrap(err, "status encode faild")
 	}
-	copy(b[1:], state)
 
 	ret, err := p.Ret.Encode()
 	if err != nil {
@@ -55,9 +54,9 @@ func (p *RetPacket) Decode(b []byte) error {
 	}
 	p.Ret = (ret).(Ret)
 
-	err = p.State.Decode(b[1:])
+	err = decodeState(b[1:], &p.State)
 	if err != nil {
-		return errors.Wrap(err, "status decode faild")
+		return errors.Wrap(err, "state decode faild")
 	}
 
 	return nil

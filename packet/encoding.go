@@ -56,3 +56,10 @@ func byteToBools(b byte) (bool, bool, bool, bool, bool, bool, bool, bool) {
 	b7 := bitIsSet(b, 7)
 	return b0, b1, b2, b3, b4, b5, b6, b7
 }
+
+func bit(offset int, b bool) byte {
+	if b {
+		return 1 << offset
+	}
+	return 0
+}

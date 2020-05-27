@@ -4,64 +4,65 @@ type State struct {
 	Tick uint64
 	Mode Mode
 
-	Battery  BatteryState
-	Charging bool
-	Powered  bool
+	Battery BatteryState
+	Powered bool
 
 	HasGrip bool
 
-	Buttons    ButtonsState
-	LeftStick  StickState
-	RightStick StickState
-	Vibration  VibrationState
+	Y, X, B, A                             Button
+	R, SR, ZR                              Button
+	L, SL, ZL                              Button
+	Minus, Plus, Home, Capture, ChargeGrip Button
+	Down, Up, Right, Left                  Button
+
+	LeftStick  Stick
+	RightStick Stick
+
+	Flash Flash
+
+	Rumble RumbleState
 }
 
-type BatteryState struct{}
-type StickState struct{}
-type ButtonsState struct{}
-type VibrationState struct{}
+type Gamepad byte
+
+type BatteryState struct {
+	Level    BatteryLevel
+	Charging bool
+}
+
+type BatteryLevel byte
+
+const (
+	BatteryFull     BatteryLevel = 0x80
+	BatteryMedium   BatteryLevel = 0x60
+	BatteryLow      BatteryLevel = 0x40
+	BatteryCritical BatteryLevel = 0x20
+	BatteryEmpty    BatteryLevel = 0x00
+)
+
+type Button struct {
+	Pressed bool
+}
+
+func (b *Button) Press() {
+	b.Pressed = true
+}
+
+func (b *Button) Release() {
+	b.Pressed = false
+}
+
+type Stick struct {
+	*Button
+	X float64
+	Y float64
+}
+
+type RumbleState struct{}
 
 func NewState() *State {
 	return &State{}
 }
-
-func (s *State) Encode() ([]byte, error) {
-	b := [12]byte{}
-	b[0] = byte(s.Tick)
-	b[1] = 0x8E
-	return b[:], nil
-}
-
-func (s *State) Decode([]byte) error {
-	return nil
-}
-
-type BasicState struct {
-	Up, Down, Left, Right      bool
-	SL, SR, LR, ZLR            bool
-	Minus, Plus, Home, Capture bool
-	LeftStick, RightStick      bool
-	Hat                        HatDirection
-}
-
-type HatDirection byte
-
-// To ensure that HatCenter is the zero value we use 0x08 - hat instead.
-const (
-	HatCenter    HatDirection = 0x00
-	HatUp        HatDirection = 0x08
-	HatUpRight   HatDirection = 0x07
-	HatRightUp   HatDirection = 0x07
-	HatRight     HatDirection = 0x06
-	HatRightDown HatDirection = 0x05
-	HatDownRight HatDirection = 0x05
-	HatDown      HatDirection = 0x04
-	HatDownLeft  HatDirection = 0x03
-	HatLeftDown  HatDirection = 0x03
-	HatLeft      HatDirection = 0x02
-	HatLeftUp    HatDirection = 0x01
-	HatUpLeft    HatDirection = 0x01
-)
 
 type Mode byte
 
