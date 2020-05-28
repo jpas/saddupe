@@ -68,11 +68,11 @@ func encodeState(b []byte, s *state.State) error {
 	b[3] |= bit(5, s.Capture.Pressed())
 
 	b[4] |= bit(0, s.Down.Pressed())
-	b[4] |= bit(0, s.Up.Pressed())
-	b[4] |= bit(0, s.Right.Pressed())
-	b[4] |= bit(0, s.Left.Pressed())
-	b[4] |= bit(0, s.L.Pressed())
-	b[4] |= bit(0, s.ZL.Pressed())
+	b[4] |= bit(1, s.Up.Pressed())
+	b[4] |= bit(2, s.Right.Pressed())
+	b[4] |= bit(3, s.Left.Pressed())
+	b[4] |= bit(6, s.L.Pressed())
+	b[4] |= bit(7, s.ZL.Pressed())
 
 	return nil
 }
