@@ -40,6 +40,10 @@ func (d Device) Read() (*Report, error) {
 	if err != nil {
 		return nil, err
 	}
+	if n == 0 {
+		return nil, errors.New("empty report")
+	}
+
 	return NewReport(ReportHeader(b[0]), b[1:n])
 }
 
