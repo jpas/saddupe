@@ -29,6 +29,14 @@ func RegisterPacket(p Packet) {
 
 var ErrUnknownPacket = errors.New("packet: unknown packet")
 
+func EncodeReport(p Packet) (*hid.Report, error) {
+	payload, err := p.Encode()
+	if err != nil {
+		return nil, errors.Wrap(err, "encode failed")
+	}
+	return hid.NewReport(p.Header(), payload)
+}
+
 func DecodeReport(r *hid.Report) (Packet, error) {
 	key := packetDecoderKey{r.Header, PacketID(r.Payload[0])}
 	target, ok := packets[key]
@@ -41,12 +49,4 @@ func DecodeReport(r *hid.Report) (Packet, error) {
 		return nil, errors.Wrap(err, "decode failed")
 	}
 	return (packet).(Packet), nil
-}
-
-func EncodeReport(p Packet) (*hid.Report, error) {
-	payload, err := p.Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "encode failed")
-	}
-	return hid.NewReport(p.Header(), payload)
 }
