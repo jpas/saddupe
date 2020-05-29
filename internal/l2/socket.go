@@ -68,14 +68,6 @@ func (s *socket) Recv(p []byte) (int, error) {
 
 func (s *socket) Connect(addr *Addr) error {
 	sa := addr.sockaddrL2()
-
-	// When SockaddrL2 is converted to RawSockaddrL2 it's byte order is swapped, but
-	// we already have it in network order so we must swap it so that they can put it
-	// back into network order
-	for i := 0; i < 3; i++ {
-		sa.Addr[i], sa.Addr[5-i] = sa.Addr[5-i], sa.Addr[i]
-	}
-
 	err := unix.Connect(s.fd, sa)
 	for errors.Is(err, unix.EINTR) {
 		err = unix.Connect(s.fd, sa)
@@ -101,16 +93,7 @@ func (s *socket) Listen(n int) error {
 }
 
 func (s *socket) Bind(addr *Addr) error {
-	sa := addr.sockaddrL2()
-
-	// When SockaddrL2 is converted to RawSockaddrL2 it's byte order is swapped, but
-	// we already have it in network order so we must swap it so that they can put it
-	// back into network order
-	for i := 0; i < 3; i++ {
-		sa.Addr[i], sa.Addr[5-i] = sa.Addr[5-i], sa.Addr[i]
-	}
-
-	err := unix.Bind(s.fd, sa)
+	err := unix.Bind(s.fd, addr.sockaddrL2())
 	if err != nil {
 		return err
 	}
