@@ -1,12 +1,15 @@
 package state
 
-import "time"
+import (
+	"errors"
+	"strings"
+)
 
 type State struct {
 	Tick uint64
 	Mode Mode
 
-	Battery BatteryState
+	Battery Battery
 	Powered bool
 
 	HasGrip bool
@@ -20,18 +23,62 @@ type State struct {
 	LeftStick  Stick
 	RightStick Stick
 
-	Flash Flash
+	Flash *Flash
 
-	Rumble RumbleState
+	Rumble Rumble
 }
 
 func NewState() *State {
-	return &State{}
+	return &State{Flash: NewFlash()}
 }
 
-type Gamepad byte
+func (s *State) ButtonByName(name string) (*Button, error) {
+	var b *Button
 
-type BatteryState struct {
+	switch strings.ToLower(name) {
+	case "y":
+		b = &s.Y
+	case "x":
+		b = &s.X
+	case "b":
+		b = &s.B
+	case "a":
+		b = &s.A
+	case "r":
+		b = &s.R
+	case "zr":
+		b = &s.ZR
+	case "l":
+		b = &s.L
+	case "zl":
+		b = &s.ZL
+	case "minus":
+		b = &s.Minus
+	case "plus":
+		b = &s.Plus
+	case "home":
+		b = &s.Home
+	case "capture":
+		b = &s.Capture
+	case "down":
+		b = &s.Down
+	case "up":
+		b = &s.Up
+	case "right":
+		b = &s.Right
+	case "left":
+		b = &s.Left
+	case "leftstick":
+		b = &s.LeftStick.Button
+	case "rightstick":
+		b = &s.RightStick.Button
+	default:
+		return nil, errors.New("unknown button")
+	}
+	return b, nil
+}
+
+type Battery struct {
 	Level    BatteryLevel
 	Charging bool
 }
@@ -46,50 +93,6 @@ const (
 	BatteryEmpty    BatteryLevel = 0x00
 )
 
-type Button struct {
-	pressed bool
-	start   time.Time
-	millis  uint64
-}
-
-func (b *Button) Pressed() bool {
-	return b.pressed
-}
-
-func (b *Button) SetPressed(p bool) {
-	if p {
-		b.Press()
-	} else {
-		b.Release()
-	}
-}
-
-func (b *Button) Press() {
-	if !b.pressed {
-		b.start = time.Now()
-	}
-	b.pressed = true
-}
-
-func (b *Button) Release() {
-	if b.pressed {
-		b.millis += uint64(time.Since(b.start).Milliseconds())
-	}
-	b.pressed = false
-}
-
-func (b *Button) Milliseconds() uint64 {
-	return b.millis
-}
-
-type Stick struct {
-	Button
-	X float64
-	Y float64
-}
-
-type RumbleState struct{}
-
 type Mode byte
 
 const (
@@ -101,3 +104,5 @@ const (
 	NFCMode          Mode = 0x31
 	BasicMode        Mode = 0x3f
 )
+
+type Rumble struct{}

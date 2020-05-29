@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -28,12 +29,15 @@ func rootRun(cmd *cobra.Command, args []string) {
 		console = args[0]
 	}
 
+	var sh *Shell
+
 	dupe, err := NewBtDupe(console)
 	if err != nil {
 		fatal(err)
 	}
 
-	if err := dupe.Run(); err != nil {
+	sh = NewShell(dupe, os.Stdin, os.Stdout)
+	if err := sh.Run(); err != nil && !errors.Is(err, ErrShellExited) {
 		fatal(err)
 	}
 }

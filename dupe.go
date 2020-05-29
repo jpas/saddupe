@@ -1,16 +1,12 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
 	"log"
-	"os"
 	"reflect"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jpas/saddupe/hid"
+	. "github.com/jpas/saddupe/internal"
 	"github.com/jpas/saddupe/packet"
 	"github.com/jpas/saddupe/state"
 	"github.com/pkg/errors"
@@ -19,102 +15,140 @@ import (
 type Dupe struct {
 	dev   *hid.Device
 	state *state.State
-	stop  chan struct{}
+	tg    TaskGroup
 }
 
 func NewDupe(dev *hid.Device) (*Dupe, error) {
 	d := &Dupe{
 		dev:   dev,
 		state: state.NewState(),
-		stop:  make(chan struct{}),
+	}
+	if err := d.start(); err != nil {
+		dev.Close()
+		return nil, err
 	}
 	return d, nil
 }
 
 func NewBtDupe(console string) (*Dupe, error) {
-	dev, err := hid.Dial("bt", console)
+	var dupe *Dupe
+	err := Retry(3, 500*time.Millisecond, func() error {
+		dev, err := hid.Dial("bt", console)
+		if err != nil {
+			return errors.Wrap(err, "unable to connect to console")
+		}
+
+		dupe, err = NewDupe(dev)
+		if err != nil {
+			return errors.Wrap(err, "failed to initialize device")
+		}
+
+		return nil
+	})
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to connect to console")
+		return nil, err
 	}
-	return NewDupe(dev)
+	return dupe, nil
+}
+
+func (d *Dupe) start() error {
+	d.tg.Add(d.ticker)
+	d.tg.Add(d.pusher)
+	d.tg.Add(d.receiver)
+	d.tg.Start()
+	// we might have early failure so wait a little bit to make sure everything is okay
+
+	select {
+	case err := <-d.Exited():
+		return errors.Wrap(err, "early failure")
+	case <-time.After(1 * time.Second):
+		return nil
+	}
 }
 
 func (d *Dupe) State() *state.State {
 	return d.state
 }
 
-func (d *Dupe) Run() error {
-	errc := make(chan error)
+func (d *Dupe) Stop() error {
+	d.tg.Stop()
+	return d.Wait()
+}
 
+func (d *Dupe) Wait() error {
+	d.tg.Wait()
+	return d.tg.Err()
+}
+
+func (d *Dupe) Exited() <-chan error {
+	err := make(chan error)
 	go func() {
-		for {
-			time.Sleep(time.Second / 240)
-			d.state.Tick += 1
-		}
+		<-d.tg.Done()
+		err <- d.tg.Err()
 	}()
+	return err
+}
 
-	recv := make(chan packet.Packet)
-	go func() {
-		for {
-			p, err := d.recv()
-			if err != nil {
-				errc <- err
-				return
-			}
-			if p.Header() != hid.OutputReportHeader {
-				continue
-			}
-			recv <- p
-		}
-	}()
-
-	shell := make(chan string)
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for {
-			fmt.Print("> ")
-			if !scanner.Scan() {
-				shell <- "exit"
-			}
-			shell <- scanner.Text()
-		}
-	}()
-
-	push := time.After(time.Second / 120)
+func (d *Dupe) ticker() error {
+	tick := time.NewTicker(time.Second / 240)
 	for {
 		select {
-		case <-d.stop:
+		case <-d.tg.Done():
 			return nil
-		case err := <-errc:
-			close(d.stop)
-			return err
-		case p := <-recv:
-			p, err := d.handlePacket(p)
-			if err != nil {
-				log.Println(errors.Wrap(err, "packet handler failed"))
-				continue
-			}
-			if p == nil {
-				continue
-			}
-			if err := d.send(p); err != nil {
-				log.Println(errors.Wrap(err, "send failed"))
-				continue
-			}
-		case <-push:
-			push = time.After(time.Second / 120)
+		case <-tick.C:
+			d.state.Tick += 1
+		}
+	}
+}
+
+func (d *Dupe) pusher() error {
+	push := time.NewTicker(time.Second / 60)
+	for {
+		select {
+		case <-d.tg.Done():
+			return nil
+		case <-push.C:
 			p := &packet.StatePacket{State: *d.state}
 			if err := d.send(p); err != nil {
 				log.Println(errors.Wrap(err, "send failed"))
 				continue
 			}
-		case line := <-shell:
-			args := strings.Fields(line)
-			if len(args) == 0 {
-				continue
+		}
+	}
+}
+
+func (d *Dupe) receiver() error {
+	recv := make(chan packet.Packet)
+	errc := make(chan error, 1)
+	go func() {
+		for {
+			select {
+			case <-d.tg.Done():
+				return
+			default:
+				p, err := d.recv()
+				if err != nil {
+					errc <- err
+					return
+				}
+				if p.Header() != hid.OutputReportHeader {
+					continue
+				}
+				recv <- p
 			}
-			if err := d.handleShellCmd(args[0], args[1:]...); err != nil {
-				log.Println(errors.Wrap(err, "shell failed"))
+		}
+	}()
+
+	for {
+		select {
+		case <-d.tg.Done():
+			return nil
+		case err := <-errc:
+			return err
+		case p := <-recv:
+			err := d.handlePacket(p)
+			if err != nil {
+				log.Println(errors.Wrap(err, "packet handler failed"))
 				continue
 			}
 		}
@@ -144,18 +178,18 @@ func (d *Dupe) recv() (packet.Packet, error) {
 	return p, nil
 }
 
-func (d *Dupe) handlePacket(p packet.Packet) (packet.Packet, error) {
+func (d *Dupe) handlePacket(p packet.Packet) error {
 	switch p := p.(type) {
 	case *packet.CmdPacket:
 		return d.handleCmd(p.Cmd)
 	case *packet.RumblePacket:
-		return nil, nil
+		return nil
 	default:
-		return nil, errors.Errorf("no packet handler for %s", reflect.TypeOf(p))
+		return errors.Errorf("no packet handler for %s", reflect.TypeOf(p))
 	}
 }
 
-func (d *Dupe) handleCmd(c packet.Cmd) (packet.Packet, error) {
+func (d *Dupe) handleCmd(c packet.Cmd) error {
 	var r packet.Ret
 	var err error
 
@@ -177,7 +211,13 @@ func (d *Dupe) handleCmd(c packet.Cmd) (packet.Packet, error) {
 	if err != nil {
 		r = packet.NewRetAck(c.Op(), false)
 	}
-	return &packet.RetPacket{State: *d.State(), Ret: r}, nil
+
+	p := &packet.RetPacket{State: *d.State(), Ret: r}
+	if err := d.send(p); err != nil {
+		log.Println(errors.Wrap(err, "send failed"))
+		return err
+	}
+	return nil
 }
 
 func (d *Dupe) handleCmdAuxSetConfig(c packet.Cmd) (packet.Ret, error) {
@@ -217,123 +257,4 @@ func (d *Dupe) handleCmdModeSet(c packet.Cmd) (packet.Ret, error) {
 	cmd := c.(*packet.CmdModeSet)
 	d.state.Mode = cmd.Mode
 	return packet.NewRetAck(cmd.Op(), true), nil
-}
-
-func (d *Dupe) handleShellCmd(cmd string, args ...string) error {
-	var err error
-	switch cmd {
-	case "e", "exit":
-		close(d.stop)
-		return nil
-	case "p", "press":
-		err = d.handleShellPress(args)
-	case "r", "release":
-		err = d.handleShellRelease(args)
-	case "t", "tap":
-		err = d.handleShellTap(args)
-	default:
-		err = errors.Errorf("unknown command: %s", cmd)
-	}
-	return err
-}
-
-func (d *Dupe) handleShellPress(args []string) error {
-	for _, name := range args {
-		button, err := d.buttonByName(name)
-		if err != nil {
-			continue
-		}
-		button.Press()
-	}
-	return nil
-}
-
-func (d *Dupe) handleShellRelease(args []string) error {
-	for _, name := range args {
-		button, err := d.buttonByName(name)
-		if err != nil {
-			continue
-		}
-		button.Press()
-	}
-	return nil
-}
-
-func (d *Dupe) handleShellTap(args []string) error {
-	usage := errors.New("usage: tap <button> [millis]")
-
-	if len(args) == 0 {
-		return usage
-	}
-	button, err := d.buttonByName(args[0])
-	if err != nil {
-		return err
-	}
-
-	var millis int
-	switch len(args) {
-	case 1:
-		millis = 100
-	case 2:
-		millis, err = strconv.Atoi(args[1])
-		if err != nil {
-			return usage
-		}
-	default:
-		return usage
-	}
-
-	button.Press()
-	go func() {
-		time.Sleep(time.Duration(millis) * time.Millisecond)
-		button.Release()
-	}()
-
-	return nil
-}
-
-func (d *Dupe) buttonByName(name string) (*state.Button, error) {
-	var b *state.Button
-
-	switch strings.ToLower(name) {
-	case "y":
-		b = &d.State().Y
-	case "x":
-		b = &d.State().X
-	case "b":
-		b = &d.State().B
-	case "a":
-		b = &d.State().A
-	case "r":
-		b = &d.State().R
-	case "zr":
-		b = &d.State().ZR
-	case "l":
-		b = &d.State().L
-	case "zl":
-		b = &d.State().ZL
-	case "minus":
-		b = &d.State().Minus
-	case "plus":
-		b = &d.State().Plus
-	case "home":
-		b = &d.State().Home
-	case "capture":
-		b = &d.State().Capture
-	case "down":
-		b = &d.State().Down
-	case "up":
-		b = &d.State().Up
-	case "right":
-		b = &d.State().Right
-	case "left":
-		b = &d.State().Left
-	case "leftstick":
-		b = &d.State().LeftStick.Button
-	case "rightstick":
-		b = &d.State().RightStick.Button
-	default:
-		return nil, errors.New("unknown button")
-	}
-	return b, nil
 }
