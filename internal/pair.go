@@ -1,11 +1,10 @@
-package hid
+package internal
 
 import (
 	"os/exec"
 	"time"
 
-	. "github.com/jpas/saddupe/hid/internal"
-	"github.com/jpas/saddupe/hid/internal/l2"
+	"github.com/jpas/saddupe/hid/l2"
 )
 
 func Pair(host string) (string, error) {

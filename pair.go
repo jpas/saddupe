@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/jpas/saddupe/hid"
+	"github.com/jpas/saddupe/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +30,7 @@ func pairRun(cmd *cobra.Command, args []string) {
 	}
 
 	host := args[0]
-	console, err := hid.Pair(host)
+	console, err := internal.Pair(host)
 	if err != nil {
 		fatal(err)
 	}

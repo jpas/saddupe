@@ -1,7 +1,7 @@
 package hid
 
 import (
-	"github.com/jpas/saddupe/hid/internal/l2"
+	"github.com/jpas/saddupe/hid/l2"
 	"github.com/pkg/errors"
 )
 
