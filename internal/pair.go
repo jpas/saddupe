@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/jpas/saddupe/hid/l2"
+	"github.com/jpas/saddupe/internal/l2"
 )
 
 func Pair(host string) (string, error) {
