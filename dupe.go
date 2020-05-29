@@ -238,7 +238,7 @@ func (d *Dupe) handleCmdButtonTime(c packet.Cmd) (packet.Ret, error) {
 func (d *Dupe) handleCmdDeviceGetInfo(c packet.Cmd) (packet.Ret, error) {
 	ret := &packet.RetDeviceGetInfo{
 		Kind:     0x03, // hard coded pro controller
-		MAC:      d.dev.MAC,
+		MAC:      d.dev.LocalAddr(),
 		HasColor: false,
 	}
 	return ret, nil

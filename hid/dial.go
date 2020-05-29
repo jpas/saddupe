@@ -25,7 +25,8 @@ func BtDial(mac string) (*Device, error) {
 		return nil, errors.Wrap(err, "unable to interrupt channel")
 	}
 
-	lmac := (interrupt.LocalAddr()).(*l2.Addr).MAC
+	localAddr := interrupt.LocalAddr().(*l2.Addr)
+	otherAddr := interrupt.RemoteAddr().(*l2.Addr)
 
-	return &Device{control, interrupt, lmac}, nil
+	return NewDevice(control, interrupt, localAddr.MAC, otherAddr.MAC)
 }

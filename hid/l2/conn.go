@@ -10,16 +10,17 @@ import (
 
 // Conn provides the net.Conn interface for L2CAP connections
 type Conn struct {
-	s          *socket
-	localAddr  net.Addr
-	remoteAddr net.Addr
-
+	s    *socket
 	live bool
 }
 
 var (
 	ErrClosedConn = errors.New("l2: read/write on closed conn")
 )
+
+func newConn(s *socket) *Conn {
+	return &Conn{s: s, live: true}
+}
 
 // NewConn returns a L2CAP connection
 func NewConn(mac string, psm uint16) (net.Conn, error) {
@@ -38,16 +39,7 @@ func NewConn(mac string, psm uint16) (net.Conn, error) {
 		return nil, errors.Wrap(err, "unable to connect")
 	}
 
-	localAddr, err := s.Getsockname()
-	if err != nil {
-		return nil, err
-	}
-
-	return newConn(s, localAddr, remoteAddr), nil
-}
-
-func newConn(s *socket, localAddr net.Addr, remoteAddr net.Addr) *Conn {
-	return &Conn{s, localAddr, remoteAddr, true}
+	return newConn(s), nil
 }
 
 // Write reads the next packet from the connection.
@@ -100,12 +92,12 @@ func (c Conn) die() error {
 
 // LocalAddr returns the address of local side of the connection.
 func (c Conn) LocalAddr() net.Addr {
-	return c.localAddr
+	return &Addr{MAC: c.s.name.Addr, PSM: c.s.name.PSM}
 }
 
 // RemoteAddr returns the address of remote endpoint of the connection.
 func (c Conn) RemoteAddr() net.Addr {
-	return c.remoteAddr
+	return &Addr{MAC: c.s.peer.Addr, PSM: c.s.peer.PSM}
 }
 
 // SetDeadline sets the deadline for Read and Write.

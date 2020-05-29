@@ -39,11 +39,11 @@ func NewListener(mac string, psm uint16) (net.Listener, error) {
 
 // Accept returns a new connection
 func (l Listener) Accept() (net.Conn, error) {
-	s, remoteAddr, err := l.s.Accept()
+	s, err := l.s.Accept()
 	if err != nil {
 		return nil, err
 	}
-	return newConn(s, l.addr, remoteAddr), nil
+	return newConn(s), nil
 }
 
 // Addr returns the address of the Listener

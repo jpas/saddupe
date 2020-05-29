@@ -2,20 +2,20 @@ package l2
 
 import (
 	"fmt"
-	"net"
 
-	"github.com/pkg/errors"
+	"github.com/jpas/saddupe/hw"
+	"golang.org/x/sys/unix"
 )
 
 // Addr implements net.Addr for L2CAP Addresses
 type Addr struct {
-	MAC MAC
+	MAC hw.MAC
 	PSM uint16
 }
 
 // NewAddr returns an Addr for L2CAP
 func NewAddr(mac string, psm uint16) (*Addr, error) {
-	m, err := ParseMAC(mac)
+	m, err := hw.ParseMAC(mac)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func NewAddr(mac string, psm uint16) (*Addr, error) {
 }
 
 func (a *Addr) String() string {
-	return fmt.Sprintf("[%s]:%d", a.MAC, a.PSM)
+	return fmt.Sprintf("[%02x]:%d", a.MAC, a.PSM)
 }
 
 // Network returns the "network" for L2CAP connections
@@ -31,29 +31,6 @@ func (a *Addr) Network() string {
 	return "l2cap"
 }
 
-type MAC [6]byte
-
-func ParseMAC(mac string) (*MAC, error) {
-	hw, err := net.ParseMAC(mac)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to parse MAC address")
-	}
-
-	var m MAC
-	if len(hw) != len(m) {
-		return nil, errors.Errorf("invalid MAC address: %s", mac)
-	}
-	for i := 0; i < len(m); i++ {
-		m[i] = hw[i]
-	}
-
-	return &m, nil
-}
-
-func (m MAC) Bytes() []byte {
-	return m[:]
-}
-
-func (m MAC) String() string {
-	return net.HardwareAddr(m.Bytes()).String()
+func (a *Addr) sockaddrL2() *unix.SockaddrL2 {
+	return &unix.SockaddrL2{Addr: a.MAC, PSM: a.PSM}
 }

@@ -4,17 +4,19 @@ import (
 	"io"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/jpas/saddupe/hw"
 	"github.com/pkg/errors"
 )
 
 type Device struct {
 	control   io.ReadWriteCloser
 	interrupt io.ReadWriteCloser
-	MAC       [6]byte
+	local     hw.MAC
+	other     hw.MAC
 }
 
-func NewDevice(control, interrupt io.ReadWriteCloser, mac [6]byte) (*Device, error) {
-	return &Device{control, interrupt, mac}, nil
+func NewDevice(control, interrupt io.ReadWriteCloser, localAddr hw.MAC, otherAddr hw.MAC) (*Device, error) {
+	return &Device{control, interrupt, localAddr, otherAddr}, nil
 }
 
 func (d Device) Close() error {
@@ -50,4 +52,12 @@ func (d Device) Read() (*Report, error) {
 func (d Device) Write(r *Report) error {
 	_, err := d.interrupt.Write(r.Bytes())
 	return err
+}
+
+func (d Device) LocalAddr() hw.MAC {
+	return d.local
+}
+
+func (d Device) OtherAddr() hw.MAC {
+	return d.other
 }

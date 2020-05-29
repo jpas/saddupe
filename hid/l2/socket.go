@@ -7,7 +7,9 @@ import (
 )
 
 type socket struct {
-	fd int
+	fd   int
+	name *unix.SockaddrL2
+	peer *unix.SockaddrL2
 }
 
 func newSocket() (*socket, error) {
@@ -20,17 +22,32 @@ func newSocket() (*socket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &socket{fd}, nil
+	return newSocketFromFd(fd), nil
 }
 
-func (s socket) Send(p []byte) (int, error) {
-	sa, err := s.getpeername()
-	if err != nil {
-		return 0, err
+func newSocketFromFd(fd int) *socket {
+	s := &socket{fd: fd}
+
+	name, err := s.getsockname()
+	if err == nil {
+		s.name = name
 	}
-	err = unix.Sendto(s.fd, p, 0, sa)
+
+	peer, err := s.getpeername()
+	if err == nil {
+		s.peer = peer
+	}
+
+	return s
+}
+
+func (s *socket) Send(p []byte) (int, error) {
+	if s.peer == nil {
+		return 0, unix.ENOTCONN
+	}
+	err := unix.Sendto(s.fd, p, 0, s.peer)
 	for errors.Is(err, unix.EINTR) {
-		err = unix.Sendto(s.fd, p, 0, sa)
+		err = unix.Sendto(s.fd, p, 0, s.peer)
 	}
 	if err != nil {
 		return 0, err
@@ -38,7 +55,7 @@ func (s socket) Send(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (s socket) Recv(p []byte) (int, error) {
+func (s *socket) Recv(p []byte) (int, error) {
 	n, _, err := unix.Recvfrom(s.fd, p, 0)
 	for errors.Is(err, unix.EINTR) {
 		n, _, err = unix.Recvfrom(s.fd, p, 0)
@@ -49,35 +66,73 @@ func (s socket) Recv(p []byte) (int, error) {
 	return n, err
 }
 
-func (s socket) Connect(addr *Addr) error {
-	sa := sockaddrL2FromAddr(addr)
+func (s *socket) Connect(addr *Addr) error {
+	sa := addr.sockaddrL2()
+
+	// When SockaddrL2 is converted to RawSockaddrL2 it's byte order is swapped, but
+	// we already have it in network order so we must swap it so that they can put it
+	// back into network order
+	for i := 0; i < 3; i++ {
+		sa.Addr[i], sa.Addr[5-i] = sa.Addr[5-i], sa.Addr[i]
+	}
 
 	err := unix.Connect(s.fd, sa)
 	for errors.Is(err, unix.EINTR) {
 		err = unix.Connect(s.fd, sa)
 	}
+
+	name, err := s.getsockname()
+	if err != nil {
+		return err
+	}
+	s.name = name
+
+	peer, err := s.getpeername()
+	if err != nil {
+		return err
+	}
+	s.peer = peer
+
 	return err
 }
 
-func (s socket) Listen(n int) error {
+func (s *socket) Listen(n int) error {
 	return unix.Listen(s.fd, n)
 }
 
-func (s socket) Bind(addr *Addr) error {
-	sa := sockaddrL2FromAddr(addr)
-	return unix.Bind(s.fd, sa)
+func (s *socket) Bind(addr *Addr) error {
+	sa := addr.sockaddrL2()
+
+	// When SockaddrL2 is converted to RawSockaddrL2 it's byte order is swapped, but
+	// we already have it in network order so we must swap it so that they can put it
+	// back into network order
+	for i := 0; i < 3; i++ {
+		sa.Addr[i], sa.Addr[5-i] = sa.Addr[5-i], sa.Addr[i]
+	}
+
+	err := unix.Bind(s.fd, sa)
+	if err != nil {
+		return err
+	}
+
+	name, err := s.getsockname()
+	if err != nil {
+		return err
+	}
+	s.name = name
+
+	return nil
 }
 
-func (s socket) Accept() (*socket, *Addr, error) {
-	fd, sa, err := unix.Accept(s.fd)
+func (s *socket) Accept() (*socket, error) {
+	fd, _, err := unix.Accept(s.fd)
 	for errors.Is(err, unix.EINTR) {
-		fd, sa, err = unix.Accept(s.fd)
+		fd, _, err = unix.Accept(s.fd)
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	return &socket{fd}, l2AddrFromSockaddr(sa), nil
+	return newSocketFromFd(fd), nil
 }
 
 func (s *socket) Close() error {
@@ -87,43 +142,26 @@ func (s *socket) Close() error {
 	return unix.Close(s.fd)
 }
 
-func (s socket) Getsockname() (*Addr, error) {
-	sa, err := unix.Getsockname(s.fd)
+func newSockaddrL2(sa unix.Sockaddr) (*unix.SockaddrL2, error) {
+	l2, ok := sa.(*unix.SockaddrL2)
+	if !ok {
+		return nil, errors.New("not a *unix.SockaddrL2")
+	}
+	return l2, nil
+}
+
+func (s *socket) getsockname() (*unix.SockaddrL2, error) {
+	sa, err := unix.Getpeername(s.fd)
 	if err != nil {
 		return nil, err
 	}
-	return l2AddrFromSockaddr(sa), nil
+	return newSockaddrL2(sa)
 }
 
-func (s socket) getpeername() (unix.Sockaddr, error) {
-	return unix.Getpeername(s.fd)
-}
-
-func (s socket) Getpeername() (*Addr, error) {
-	sa, err := s.getpeername()
+func (s *socket) getpeername() (*unix.SockaddrL2, error) {
+	sa, err := unix.Getpeername(s.fd)
 	if err != nil {
 		return nil, err
 	}
-	return l2AddrFromSockaddr(sa), nil
-}
-
-// sockaddrL2FromAddr returns a unix.SockaddrL2 corresponding to addr, but with the Addr field in big endian.
-//
-// When SockaddrL2 is converted to RawSockaddrL2 it is converted back to little endian.
-// This conversion is _not_ done when beign returned from Accept, Getpeername, or Getsockname.
-func sockaddrL2FromAddr(addr *Addr) *unix.SockaddrL2 {
-	sa := &unix.SockaddrL2{PSM: addr.PSM}
-	for i := 0; i < 6; i++ {
-		sa.Addr[i] = addr.MAC[i]
-	}
-	return sa
-}
-
-func l2AddrFromSockaddr(sa unix.Sockaddr) *Addr {
-	l2sa := sa.(*unix.SockaddrL2)
-	addr := &Addr{PSM: l2sa.PSM}
-	for i := 0; i < 6; i++ {
-		addr.MAC[i] = l2sa.Addr[5-i]
-	}
-	return addr
+	return newSockaddrL2(sa)
 }
