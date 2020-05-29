@@ -47,13 +47,19 @@ func (sh *Shell) Run() error {
 			}
 			sh.prompt()
 		}
+		fmt.Fprintln(sh.out)
 	}()
 
 	for {
 		select {
 		case err := <-sh.dupe.Exited():
+			done <- true
 			return err
-		case line := <-lines:
+		case line, ok := <-lines:
+			if !ok {
+				return nil
+			}
+
 			args := strings.Fields(line)
 			if len(args) == 0 {
 				done <- false
