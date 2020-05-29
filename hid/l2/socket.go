@@ -28,40 +28,35 @@ func (s socket) Send(p []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	for {
+	err = unix.Sendto(s.fd, p, 0, sa)
+	for errors.Is(err, unix.EINTR) {
 		err = unix.Sendto(s.fd, p, 0, sa)
-		if errors.Is(err, unix.EINTR) {
-			continue
-		}
-		if err != nil {
-			return 0, err
-		}
-		return len(p), nil
 	}
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
 }
 
 func (s socket) Recv(p []byte) (int, error) {
-	for {
-		n, _, err := unix.Recvfrom(s.fd, p, 0)
-		if errors.Is(err, unix.EINTR) {
-			continue
-		}
-		if err != nil {
-			return 0, err
-		}
-		return n, err
+	n, _, err := unix.Recvfrom(s.fd, p, 0)
+	for errors.Is(err, unix.EINTR) {
+		n, _, err = unix.Recvfrom(s.fd, p, 0)
 	}
+	if err != nil {
+		return 0, err
+	}
+	return n, err
 }
 
 func (s socket) Connect(addr *Addr) error {
 	sa := sockaddrL2FromAddr(addr)
-	for {
-		err := unix.Connect(s.fd, sa)
-		if errors.Is(err, unix.EINTR) {
-			continue
-		}
-		return err
+
+	err := unix.Connect(s.fd, sa)
+	for errors.Is(err, unix.EINTR) {
+		err = unix.Connect(s.fd, sa)
 	}
+	return err
 }
 
 func (s socket) Listen(n int) error {
@@ -74,16 +69,15 @@ func (s socket) Bind(addr *Addr) error {
 }
 
 func (s socket) Accept() (*socket, *Addr, error) {
-	for {
-		fd, sa, err := unix.Accept(s.fd)
-		if errors.Is(err, unix.EINTR) {
-			continue
-		}
-		if err != nil {
-			return nil, nil, err
-		}
-		return &socket{fd}, l2AddrFromSockaddr(sa), nil
+	fd, sa, err := unix.Accept(s.fd)
+	for errors.Is(err, unix.EINTR) {
+		fd, sa, err = unix.Accept(s.fd)
 	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &socket{fd}, l2AddrFromSockaddr(sa), nil
 }
 
 func (s *socket) Close() error {
