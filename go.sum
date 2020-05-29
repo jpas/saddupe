@@ -70,6 +70,8 @@ github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrk
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/muka/go-bluetooth v0.0.0-20200518110738-ed2c87e2f9fa h1:umshakNHYKRzZ7nQElCl/ceO1UVxW36H0uMw5kej0OU=
 github.com/muka/go-bluetooth v0.0.0-20200518110738-ed2c87e2f9fa/go.mod h1:9Y4iuJfFe4N3afRt1qKpHU7vKUqyaWm/wJk2QEk6hgM=
+github.com/muka/go-bluetooth v0.0.0-20200527142246-c69565a982b8 h1:XiZXNbp0jZBM+nUzyimPbM413E0hAFDIP5fMWs1njl8=
+github.com/muka/go-bluetooth v0.0.0-20200527142246-c69565a982b8/go.mod h1:9Y4iuJfFe4N3afRt1qKpHU7vKUqyaWm/wJk2QEk6hgM=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=

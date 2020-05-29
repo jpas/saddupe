@@ -3,10 +3,9 @@ module github.com/jpas/saddupe
 go 1.14
 
 require (
-	github.com/davecgh/go-spew v1.1.1
 	github.com/godbus/dbus v4.1.0+incompatible
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/muka/go-bluetooth v0.0.0-20200518110738-ed2c87e2f9fa
+	github.com/muka/go-bluetooth v0.0.0-20200527142246-c69565a982b8
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5 // indirect
