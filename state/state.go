@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -29,7 +30,19 @@ type State struct {
 }
 
 func NewState() *State {
-	return &State{Flash: NewFlash()}
+	s := &State{Flash: NewFlash()}
+	s.Mode = FullMode
+	s.Battery.Level = BatteryFull
+	s.Flash.SetSerial("")
+
+	axis := AxisCalibration{Min: 0, Center: 0x7ff, Max: 0xffe}
+	stick := StickCalibration{X: axis, Y: axis}
+	s.Flash.SetLeftStickCalibration(&stick)
+	s.Flash.SetRightStickCalibration(&stick)
+
+	fmt.Printf("%03x\n%03x\n", stick, *s.Flash.LeftStickCalibration())
+
+	return s
 }
 
 func (s *State) ButtonByName(name string) (*Button, error) {
