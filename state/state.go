@@ -35,6 +35,11 @@ func NewState() *State {
 	s.Battery.Level = BatteryFull
 	s.Flash.SetSerial("")
 
+	s.Flash.SetBodyColour(RandomColor())
+	s.Flash.SetButtonColour(RandomColor())
+	s.Flash.SetLeftGripColour(RandomColor())
+	s.Flash.SetRightGripColour(RandomColor())
+
 	axis := AxisCalibration{Min: 0, Center: 0x7ff, Max: 0xffe}
 	stick := StickCalibration{X: axis, Y: axis}
 	s.Flash.SetLeftStickCalibration(&stick)

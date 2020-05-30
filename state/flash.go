@@ -1,6 +1,10 @@
 package state
 
-import "log"
+import (
+	"log"
+	"math/rand"
+	"time"
+)
 
 type Flash struct {
 	mem [0x10000]byte
@@ -46,6 +50,17 @@ func (f *Flash) SetSerial(s string) {
 
 type Color struct {
 	R, G, B uint8
+}
+
+var colorRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func RandomColor() Color {
+	v := colorRand.Uint32()
+	return Color{
+		R: byte(v),
+		G: byte(v >> 8),
+		B: byte(v >> 16),
+	}
 }
 
 type AxisCalibration struct {

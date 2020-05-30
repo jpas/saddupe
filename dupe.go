@@ -239,7 +239,7 @@ func (d *Dupe) handleCmdDeviceGetInfo(c packet.Cmd) (packet.Ret, error) {
 	ret := &packet.RetDeviceGetInfo{
 		Kind:     0x03, // hard coded pro controller
 		MAC:      d.dev.LocalAddr(),
-		HasColor: false,
+		HasColor: true,
 	}
 	return ret, nil
 }
