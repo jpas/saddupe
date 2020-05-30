@@ -21,7 +21,7 @@ type Dupe struct {
 func NewDupe(dev *hid.Device) (*Dupe, error) {
 	d := &Dupe{
 		dev:   dev,
-		state: state.NewState(),
+		state: state.NewState(state.Pro),
 	}
 	if err := d.start(); err != nil {
 		dev.Close()
@@ -237,9 +237,9 @@ func (d *Dupe) handleCmdButtonTime(c packet.Cmd) (packet.Ret, error) {
 
 func (d *Dupe) handleCmdDeviceGetInfo(c packet.Cmd) (packet.Ret, error) {
 	ret := &packet.RetDeviceGetInfo{
-		Kind:     0x03, // hard coded pro controller
+		Kind:     d.state.Kind(),
 		MAC:      d.dev.LocalAddr(),
-		HasColor: true,
+		HasColor: d.state.HasColor(),
 	}
 	return ret, nil
 }
@@ -247,7 +247,7 @@ func (d *Dupe) handleCmdDeviceGetInfo(c packet.Cmd) (packet.Ret, error) {
 func (d *Dupe) handleCmdFlashRead(c packet.Cmd) (packet.Ret, error) {
 	cmd := c.(*packet.CmdFlashRead)
 	data := make([]byte, cmd.Len)
-	if err := d.state.Flash.Read(data, cmd.Addr, cmd.Len); err != nil {
+	if err := d.state.Read(data, cmd.Addr, cmd.Len); err != nil {
 		return nil, errors.Wrap(err, "unable to read flash")
 	}
 	return &packet.RetFlashRead{Addr: cmd.Addr, Data: data}, nil

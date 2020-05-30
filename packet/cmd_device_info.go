@@ -1,5 +1,9 @@
 package packet
 
+import (
+	"github.com/jpas/saddupe/state"
+)
+
 type CmdDeviceGetInfo struct{}
 
 const CmdDeviceGetInfoOp OpCode = 0x02
@@ -23,7 +27,7 @@ func (c *CmdDeviceGetInfo) Decode([]byte) error {
 type RetDeviceGetInfo struct {
 	Firmware [2]byte
 	MAC      [6]byte
-	Kind     byte
+	Kind     state.DeviceKind
 	HasColor bool
 }
 
@@ -49,7 +53,7 @@ func (r *RetDeviceGetInfo) Encode() ([]byte, error) {
 		return nil, err
 	}
 	b[2], b[3] = 0x04, 0x06
-	b[4] = r.Kind
+	b[4] = byte(r.Kind)
 	b[5] = 0x02
 	copy(b[6:], r.MAC[:])
 	b[12] = 0x01
@@ -59,7 +63,7 @@ func (r *RetDeviceGetInfo) Encode() ([]byte, error) {
 
 func (r *RetDeviceGetInfo) Decode(b []byte) error {
 	copy(r.Firmware[:], b[2:])
-	r.Kind = b[4]
+	r.Kind = state.DeviceKind(b[4])
 	copy(r.MAC[:], b[6:])
 	r.HasColor = bitIsSet(b[13], 0)
 	return nil

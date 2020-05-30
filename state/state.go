@@ -2,18 +2,11 @@ package state
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
 type State struct {
-	Tick uint64
-	Mode Mode
-
-	Battery Battery
-	Powered bool
-
-	HasGrip bool
+	*Flash
 
 	Y, X, B, A                             Button
 	R, SR, ZR                              Button
@@ -24,28 +17,40 @@ type State struct {
 	LeftStick  Stick
 	RightStick Stick
 
-	Flash *Flash
-
+	Tick   uint64
+	Mode   Mode
 	Rumble Rumble
+
+	Battery Battery
+	Powered bool
 }
 
-func NewState() *State {
+func NewState(t DeviceKind) *State {
 	s := &State{Flash: NewFlash()}
-	s.Mode = FullMode
-	s.Battery.Level = BatteryFull
-	s.Flash.SetSerial("")
 
-	s.Flash.SetBodyColour(RandomColor())
-	s.Flash.SetButtonColour(RandomColor())
-	s.Flash.SetLeftGripColour(RandomColor())
-	s.Flash.SetRightGripColour(RandomColor())
+	s.SetSerial("")
+	s.SetKind(t)
+
+	s.SetHasColor(true)
+	s.SetBodyColour(RandomColor())
+	s.SetButtonColour(RandomColor())
+	s.SetLeftGripColour(RandomColor())
+	s.SetRightGripColour(RandomColor())
 
 	axis := AxisCalibration{Min: 0, Center: 0x7ff, Max: 0xffe}
 	stick := StickCalibration{X: axis, Y: axis}
-	s.Flash.SetLeftStickCalibration(&stick)
-	s.Flash.SetRightStickCalibration(&stick)
+	switch t {
+	case SadLeft:
+		s.SetLeftStickCalibration(&stick)
+	case SadRight:
+		s.SetRightStickCalibration(&stick)
+	case Pro:
+		s.SetLeftStickCalibration(&stick)
+		s.SetRightStickCalibration(&stick)
+	}
 
-	fmt.Printf("%03x\n%03x\n", stick, *s.Flash.LeftStickCalibration())
+	s.Mode = FullMode
+	s.Battery.Level = BatteryFull
 
 	return s
 }
@@ -64,10 +69,14 @@ func (s *State) ButtonByName(name string) (*Button, error) {
 		b = &s.A
 	case "r":
 		b = &s.R
+	case "sr":
+		b = &s.SR
 	case "zr":
 		b = &s.ZR
 	case "l":
 		b = &s.L
+	case "sl":
+		b = &s.SL
 	case "zl":
 		b = &s.ZL
 	case "minus":
@@ -86,6 +95,8 @@ func (s *State) ButtonByName(name string) (*Button, error) {
 		b = &s.Right
 	case "left":
 		b = &s.Left
+	case "chargegrip":
+		b = &s.ChargeGrip
 	case "leftstick":
 		b = &s.LeftStick.Button
 	case "rightstick":
@@ -95,6 +106,31 @@ func (s *State) ButtonByName(name string) (*Button, error) {
 	}
 	return b, nil
 }
+
+func (s *State) StickByName(name string) (*Stick, error) {
+	switch strings.ToLower(name) {
+	case "left":
+		return &s.LeftStick, nil
+	case "right":
+		return &s.RightStick, nil
+	default:
+		return nil, errors.New("unknown stick")
+	}
+}
+
+type Mode byte
+
+const (
+	ActiveNFCIRMode0 Mode = 0x00
+	ActiveNFCIRMode1 Mode = 0x01
+	ActiveNFCIRMode2 Mode = 0x02
+	ActiveNFCIRMode3 Mode = 0x03
+	FullMode         Mode = 0x30
+	NFCMode          Mode = 0x31
+	BasicMode        Mode = 0x3f
+)
+
+type Rumble struct{}
 
 type Battery struct {
 	Level    BatteryLevel
@@ -110,17 +146,3 @@ const (
 	BatteryCritical BatteryLevel = 0x20
 	BatteryEmpty    BatteryLevel = 0x00
 )
-
-type Mode byte
-
-const (
-	ActiveNFCIRMode0 Mode = 0x00
-	ActiveNFCIRMode1 Mode = 0x01
-	ActiveNFCIRMode2 Mode = 0x02
-	ActiveNFCIRMode3 Mode = 0x03
-	FullMode         Mode = 0x30
-	NFCMode          Mode = 0x31
-	BasicMode        Mode = 0x3f
-)
-
-type Rumble struct{}
