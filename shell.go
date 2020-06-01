@@ -14,8 +14,8 @@ import (
 
 type Shell struct {
 	dupe *Dupe
-	in   io.Reader
-	out  io.Writer
+	in   *Scanner
+	out  *Printer
 }
 
 var ErrShellExited = errors.New("shell exited")
@@ -23,60 +23,40 @@ var ErrShellExited = errors.New("shell exited")
 func NewShell(dupe *Dupe, in io.Reader, out io.Writer) *Shell {
 	sh := &Shell{
 		dupe: dupe,
-		in:   in,
-		out:  out,
+		in:   NewScanner(in),
+		out:  NewPrinter(out),
 	}
 	return sh
 }
 
 func (sh *Shell) prompt() {
-	fmt.Fprint(sh.out, "> ")
+	sh.out.Print("> ")
 }
 
 func (sh *Shell) Run() error {
-	lines := make(chan string)
-	done := make(chan bool)
-	go func() {
-		defer close(lines)
-		in := bufio.NewScanner(sh.in)
-		sh.prompt()
-		for in.Scan() {
-			lines <- in.Text()
-			if d, ok := <-done; d || !ok {
-				return
-			}
-			sh.prompt()
-		}
-		fmt.Fprintln(sh.out)
-	}()
-
 	for {
+		sh.prompt()
 		select {
 		case <-sh.dupe.Done():
-			close(done)
 			return sh.dupe.Err()
-		case line, ok := <-lines:
+		case ok := <-sh.in.Scan():
 			if !ok {
 				return nil
 			}
 
-			args := strings.Fields(line)
+			args := strings.Fields(sh.in.Text())
 			if len(args) == 0 {
-				done <- false
 				continue
 			}
 
 			err := sh.handleCmd(args[0], args[1:]...)
 			if errors.Is(err, ErrShellExited) {
-				done <- true
 				return nil
 			}
 
 			if err != nil {
-				fmt.Fprintln(sh.out, errors.Wrap(err, "shell failed"))
+				sh.out.Println(errors.Wrap(err, "shell failed"))
 			}
-
-			done <- false
 		}
 	}
 }
@@ -181,4 +161,43 @@ func (sh *Shell) handleTap(args []string) error {
 
 	button.Tap(time.Duration(millis) * time.Millisecond)
 	return nil
+}
+
+type Scanner struct {
+	*bufio.Scanner
+	scan chan bool
+}
+
+func NewScanner(r io.Reader) *Scanner {
+	return &Scanner{
+		Scanner: bufio.NewScanner(r),
+		scan:    make(chan bool),
+	}
+}
+
+func (s *Scanner) Scan() <-chan bool {
+	go func() {
+		s.scan <- s.Scanner.Scan()
+	}()
+	return s.scan
+}
+
+type Printer struct {
+	w io.Writer
+}
+
+func NewPrinter(w io.Writer) *Printer {
+	return &Printer{w}
+}
+
+func (p Printer) Print(a ...interface{}) (int, error) {
+	return fmt.Fprint(p.w, a...)
+}
+
+func (p Printer) Printf(format string, a ...interface{}) (int, error) {
+	return fmt.Fprintf(p.w, format, a...)
+}
+
+func (p Printer) Println(a ...interface{}) (int, error) {
+	return fmt.Fprintln(p.w, a...)
 }
