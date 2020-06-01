@@ -59,8 +59,8 @@ func (d *Dupe) start() error {
 	// we might have early failure so wait a little bit to make sure everything is okay
 
 	select {
-	case err := <-d.Exited():
-		return errors.Wrap(err, "early failure")
+	case <-d.Done():
+		return errors.Wrap(d.Err(), "early failure")
 	case <-time.After(1 * time.Second):
 		return nil
 	}
@@ -80,13 +80,12 @@ func (d *Dupe) Wait() error {
 	return d.tg.Err()
 }
 
-func (d *Dupe) Exited() <-chan error {
-	err := make(chan error)
-	go func() {
-		<-d.tg.Done()
-		err <- d.tg.Err()
-	}()
-	return err
+func (d *Dupe) Done() <-chan struct{} {
+	return d.tg.Done()
+}
+
+func (d *Dupe) Err() error {
+	return d.tg.Err()
 }
 
 func (d *Dupe) ticker() error {
@@ -148,7 +147,7 @@ func (d *Dupe) receiver() error {
 		case p := <-recv:
 			err := d.handlePacket(p)
 			if err != nil {
-				log.Println(errors.Wrap(err, "packet handler failed"))
+				log.Println("receiver:", errors.Wrap(err, "packet handler failed"))
 				continue
 			}
 		}

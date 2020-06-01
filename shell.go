@@ -42,7 +42,7 @@ func (sh *Shell) Run() error {
 		sh.prompt()
 		for in.Scan() {
 			lines <- in.Text()
-			if <-done {
+			if d, ok := <-done; d || !ok {
 				return
 			}
 			sh.prompt()
@@ -52,9 +52,9 @@ func (sh *Shell) Run() error {
 
 	for {
 		select {
-		case err := <-sh.dupe.Exited():
-			done <- true
-			return err
+		case <-sh.dupe.Done():
+			close(done)
+			return sh.dupe.Err()
 		case line, ok := <-lines:
 			if !ok {
 				return nil
