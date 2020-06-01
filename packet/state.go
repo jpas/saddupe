@@ -61,38 +61,38 @@ func encodeState(b []byte, s *state.State) error {
 	}
 
 	b[2] = 0
-	b[2] |= bit(0, s.Y.Pressed())
-	b[2] |= bit(1, s.X.Pressed())
-	b[2] |= bit(2, s.B.Pressed())
-	b[2] |= bit(3, s.A.Pressed())
-	b[2] |= bit(6, s.R.Pressed())
-	b[2] |= bit(7, s.ZR.Pressed())
+	b[2] |= bit(0, s.Y.Held())
+	b[2] |= bit(1, s.X.Held())
+	b[2] |= bit(2, s.B.Held())
+	b[2] |= bit(3, s.A.Held())
+	b[2] |= bit(6, s.R.Held())
+	b[2] |= bit(7, s.ZR.Held())
 
 	b[3] = 0
-	b[3] |= bit(0, s.Minus.Pressed())
-	b[3] |= bit(1, s.Plus.Pressed())
-	b[3] |= bit(2, s.RightStick.Pressed())
-	b[3] |= bit(3, s.LeftStick.Pressed())
-	b[3] |= bit(4, s.Home.Pressed())
-	b[3] |= bit(5, s.Capture.Pressed())
+	b[3] |= bit(0, s.Minus.Held())
+	b[3] |= bit(1, s.Plus.Held())
+	b[3] |= bit(2, s.RightStick.Held())
+	b[3] |= bit(3, s.LeftStick.Held())
+	b[3] |= bit(4, s.Home.Held())
+	b[3] |= bit(5, s.Capture.Held())
 
 	b[4] = 0
-	b[4] |= bit(0, s.Down.Pressed())
-	b[4] |= bit(1, s.Up.Pressed())
-	b[4] |= bit(2, s.Right.Pressed())
-	b[4] |= bit(3, s.Left.Pressed())
-	b[4] |= bit(6, s.L.Pressed())
-	b[4] |= bit(7, s.ZL.Pressed())
+	b[4] |= bit(0, s.Down.Held())
+	b[4] |= bit(1, s.Up.Held())
+	b[4] |= bit(2, s.Right.Held())
+	b[4] |= bit(3, s.Left.Held())
+	b[4] |= bit(6, s.L.Held())
+	b[4] |= bit(7, s.ZL.Held())
 
 	switch s.Kind() {
 	case state.SadRight:
-		b[2] |= bit(4, s.SR.Pressed())
-		b[2] |= bit(5, s.SL.Pressed())
-		b[3] |= bit(6, s.ChargeGrip.Pressed())
+		b[2] |= bit(4, s.SR.Held())
+		b[2] |= bit(5, s.SL.Held())
+		b[3] |= bit(6, s.ChargeGrip.Held())
 	case state.SadLeft:
-		b[3] |= bit(6, s.ChargeGrip.Pressed())
-		b[4] |= bit(4, s.SR.Pressed())
-		b[4] |= bit(5, s.SL.Pressed())
+		b[3] |= bit(6, s.ChargeGrip.Held())
+		b[4] |= bit(4, s.SR.Held())
+		b[4] |= bit(5, s.SL.Held())
 	}
 
 	encodeStick(b[5:], &s.LeftStick, s.LeftStickCalibration())

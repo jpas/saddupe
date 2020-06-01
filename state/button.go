@@ -8,19 +8,19 @@ type Button struct {
 	millis  uint64
 }
 
-func (b *Button) Pressed() bool {
+func (b *Button) Held() bool {
 	return b.pressed
 }
 
-func (b *Button) SetPressed(p bool) {
+func (b *Button) SetHeld(p bool) {
 	if p {
-		b.Press()
+		b.Hold()
 	} else {
 		b.Release()
 	}
 }
 
-func (b *Button) Press() {
+func (b *Button) Hold() {
 	if !b.pressed {
 		b.start = time.Now()
 	}
@@ -36,4 +36,10 @@ func (b *Button) Release() {
 
 func (b *Button) Milliseconds() uint64 {
 	return b.millis
+}
+
+func (b *Button) Tap(t time.Duration) {
+	b.Hold()
+	time.Sleep(t)
+	b.Release()
 }

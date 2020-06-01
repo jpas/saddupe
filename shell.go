@@ -86,8 +86,8 @@ func (sh *Shell) handleCmd(cmd string, args ...string) error {
 	switch cmd {
 	case "e", "exit":
 		return ErrShellExited
-	case "p", "press":
-		err = sh.handlePress(args)
+	case "h", "hold":
+		err = sh.handleHold(args)
 	case "r", "release":
 		err = sh.handleRelease(args)
 	case "s", "stick":
@@ -113,9 +113,9 @@ func (sh *Shell) buttonsByName(names ...string) []*state.Button {
 	return buttons
 
 }
-func (sh *Shell) handlePress(args []string) error {
+func (sh *Shell) handleHold(args []string) error {
 	for _, button := range sh.buttonsByName(args...) {
-		button.Press()
+		button.Hold()
 	}
 	return nil
 }
@@ -171,24 +171,14 @@ func (sh *Shell) handleTap(args []string) error {
 		return err
 	}
 
-	var millis int
-	switch len(args) {
-	case 1:
-		millis = 100
-	case 2:
+	millis := 100
+	if len(args) == 2 {
 		millis, err = strconv.Atoi(args[1])
 		if err != nil {
 			return usage
 		}
-	default:
-		return usage
 	}
 
-	button.Press()
-	go func() {
-		time.Sleep(time.Duration(millis) * time.Millisecond)
-		button.Release()
-	}()
-
+	button.Tap(time.Duration(millis) * time.Millisecond)
 	return nil
 }
