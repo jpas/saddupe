@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 // Conn provides the net.Conn interface for L2CAP connections
@@ -18,8 +19,16 @@ var (
 	ErrClosedConn = errors.New("l2: read/write on closed conn")
 )
 
-func newConn(s *socket) *Conn {
-	return &Conn{s: s, live: true}
+func newConn(s *socket) (*Conn, error) {
+	if err := s.SetSendTimeout(500 * time.Millisecond); err != nil {
+		return nil, err
+	}
+
+	if err := s.SetRecvTimeout(500 * time.Millisecond); err != nil {
+		return nil, err
+	}
+
+	return &Conn{s: s, live: true}, nil
 }
 
 // NewConn returns a L2CAP connection
@@ -39,7 +48,7 @@ func NewConn(mac string, psm uint16) (net.Conn, error) {
 		return nil, errors.Wrap(err, "unable to connect")
 	}
 
-	return newConn(s), nil
+	return newConn(s)
 }
 
 // Write reads the next packet from the connection.
@@ -49,15 +58,14 @@ func (c Conn) Read(p []byte) (int, error) {
 	}
 
 	n, err := c.s.Recv(p)
-	if err != nil {
-		return 0, err
-	}
-
-	if n == 0 {
+	if n == 0 || errors.Is(err, unix.EWOULDBLOCK) {
 		if err := c.die(); err != nil {
 			return 0, err
 		}
 		return 0, io.EOF
+	}
+	if err != nil {
+		return 0, err
 	}
 
 	return n, nil
@@ -68,7 +76,6 @@ func (c Conn) Write(p []byte) (int, error) {
 	if !c.live {
 		return 0, ErrClosedConn
 	}
-
 	return c.s.Send(p)
 }
 

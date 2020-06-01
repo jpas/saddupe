@@ -43,7 +43,7 @@ func (l Listener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newConn(s), nil
+	return newConn(s)
 }
 
 // Addr returns the address of the Listener

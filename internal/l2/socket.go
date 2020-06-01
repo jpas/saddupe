@@ -2,6 +2,7 @@ package l2
 
 import (
 	"errors"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -64,6 +65,35 @@ func (s *socket) Recv(p []byte) (int, error) {
 		return 0, err
 	}
 	return n, err
+}
+
+func (s *socket) timeout(opt int) (time.Duration, error) {
+	tv, err := unix.GetsockoptTimeval(s.fd, unix.SOL_SOCKET, opt)
+	if err != nil {
+		return 0, err
+	}
+	return time.Duration(tv.Nano()), nil
+}
+
+func (s *socket) setTimeout(opt int, t time.Duration) error {
+	tv := unix.NsecToTimeval(t.Nanoseconds())
+	return unix.SetsockoptTimeval(s.fd, unix.SOL_SOCKET, opt, &tv)
+}
+
+func (s *socket) SendTimeout() (time.Duration, error) {
+	return s.timeout(unix.SO_SNDTIMEO)
+}
+
+func (s *socket) SetSendTimeout(t time.Duration) error {
+	return s.setTimeout(unix.SO_SNDTIMEO, t)
+}
+
+func (s *socket) RecvTimeout() (time.Duration, error) {
+	return s.timeout(unix.SO_RCVTIMEO)
+}
+
+func (s *socket) SetRecvTimeout(t time.Duration) error {
+	return s.setTimeout(unix.SO_RCVTIMEO, t)
 }
 
 func (s *socket) Connect(addr *Addr) error {
