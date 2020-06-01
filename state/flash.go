@@ -126,10 +126,10 @@ func (f *Flash) putStickCalibration(s *StickCalibration, addr int) {
 	m[1] = byte(s.Y.Max<<4)&0xf0 | byte(s.X.Max>>8)&0x0f
 	m[2] = byte(s.Y.Max >> 4)
 	m[3] = byte(s.X.Center)
-	m[4] = byte(s.Y.Center<<4)&0xf0 | byte(s.X.Max>>8)&0x0f
+	m[4] = byte(s.Y.Center<<4)&0xf0 | byte(s.X.Center>>8)&0x0f
 	m[5] = byte(s.Y.Center >> 4)
 	m[6] = byte(s.X.Min)
-	m[7] = byte(s.Y.Min<<4)&0xf0 | byte(s.X.Max>>8)&0x0f
+	m[7] = byte(s.Y.Min<<4)&0xf0 | byte(s.X.Min>>8)&0x0f
 	m[8] = byte(s.Y.Min >> 4)
 }
 

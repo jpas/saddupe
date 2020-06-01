@@ -1,6 +1,8 @@
 package state
 
-import "math/cmplx"
+import (
+	"math/cmplx"
+)
 
 type Stick struct {
 	Button

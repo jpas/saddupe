@@ -79,27 +79,27 @@ func (s *State) ButtonByName(name string) (*Button, error) {
 		b = &s.SL
 	case "zl":
 		b = &s.ZL
-	case "minus":
+	case "-", "minus":
 		b = &s.Minus
-	case "plus":
+	case "+", "plus":
 		b = &s.Plus
 	case "home":
 		b = &s.Home
 	case "capture":
 		b = &s.Capture
-	case "down":
+	case "v", "down":
 		b = &s.Down
-	case "up":
+	case "^", "up":
 		b = &s.Up
-	case "right":
+	case ">", "right":
 		b = &s.Right
-	case "left":
+	case "<", "left":
 		b = &s.Left
 	case "chargegrip":
 		b = &s.ChargeGrip
-	case "leftstick":
+	case "ls", "lstick", "leftstick":
 		b = &s.LeftStick.Button
-	case "rightstick":
+	case "rs", "rstick", "rightstick":
 		b = &s.RightStick.Button
 	default:
 		return nil, errors.New("unknown button")
@@ -109,9 +109,9 @@ func (s *State) ButtonByName(name string) (*Button, error) {
 
 func (s *State) StickByName(name string) (*Stick, error) {
 	switch strings.ToLower(name) {
-	case "left":
+	case "l", "left":
 		return &s.LeftStick, nil
-	case "right":
+	case "r", "right":
 		return &s.RightStick, nil
 	default:
 		return nil, errors.New("unknown stick")

@@ -90,6 +90,8 @@ func (sh *Shell) handleCmd(cmd string, args ...string) error {
 		err = sh.handlePress(args)
 	case "r", "release":
 		err = sh.handleRelease(args)
+	case "s", "stick":
+		err = sh.handleStick(args)
 	case "t", "tap":
 		err = sh.handleTap(args)
 	default:
@@ -122,6 +124,39 @@ func (sh *Shell) handleRelease(args []string) error {
 	for _, button := range sh.buttonsByName(args...) {
 		button.Release()
 	}
+	return nil
+}
+
+func (sh *Shell) handleStick(args []string) error {
+	usage := errors.New("usage: stick <side> <direction>")
+	if len(args) != 2 {
+		return usage
+	}
+
+	stick, err := sh.dupe.State().StickByName(args[0])
+	if err != nil {
+		return err
+	}
+
+	// TODO(jpas) cartesian coordinates with x,y
+	// TODO(jpas) polar coordinates with r:a
+
+	var x, y float64
+	switch args[1] {
+	case "u", "up":
+		x, y = 0, 1
+	case "d", "down":
+		x, y = 0, -1
+	case "l", "left":
+		x, y = -1, 0
+	case "r", "right":
+		x, y = 1, 0
+	case "c", "center":
+		x, y = 0, 0
+	default:
+		return errors.Errorf("bad direction %s", args[1])
+	}
+	stick.Set(x, y)
 	return nil
 }
 
