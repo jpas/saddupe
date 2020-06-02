@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/jpas/saddupe/shell"
 	"github.com/jpas/saddupe/state"
 	"github.com/spf13/cobra"
 )
@@ -35,13 +36,13 @@ func rootRun(cmd *cobra.Command, args []string) {
 		fatal(err)
 	}
 
-	sh, err := NewShell(st, os.Stdin, os.Stdout)
+	sh, err := shell.NewShell(st)
 	if err != nil {
 		fatal(err)
 	}
 	go func() {
 		dupe.Started()
-		sh.REPL()
+		sh.REPL(os.Stdin, os.Stdout)
 		dupe.Close()
 	}()
 
