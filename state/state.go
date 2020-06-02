@@ -25,7 +25,7 @@ type State struct {
 	Powered bool
 }
 
-func NewState(t DeviceKind) *State {
+func New(t DeviceKind) *State {
 	s := &State{Flash: NewFlash()}
 
 	s.SetSerial("")

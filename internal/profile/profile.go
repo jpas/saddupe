@@ -1,4 +1,4 @@
-package internal
+package profile
 
 import (
 	"github.com/godbus/dbus"
@@ -10,8 +10,8 @@ type Profile struct {
 	m *profile.ProfileManager1
 }
 
-// RegisterProfile registers a Service Discovery Protocol profile
-func RegisterProfile(path string, uuid string, options map[string]interface{}) (*Profile, error) {
+// Register a Service Discovery Protocol profile
+func Register(path string, uuid string, options map[string]interface{}) (*Profile, error) {
 	m, err := profile.NewProfileManager1()
 	if err != nil {
 		return nil, err

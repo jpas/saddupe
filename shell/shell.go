@@ -16,18 +16,14 @@ type Shell struct {
 	interp *interp.Interpreter
 }
 
-func NewShell(st *state.State) (*Shell, error) {
+func New(st *state.State) (*Shell, error) {
 	i := interp.New(interp.Options{})
 	i.Use(stdlib.Symbols)
 	i.Use(map[string]map[string]reflect.Value{
 		"github.com/jpas/saddupe/shell/env": {
 			"State": reflect.ValueOf(st),
 			"Run": reflect.ValueOf(func(path string) error {
-				sh, err := NewShell(st)
-				if err != nil {
-					return err
-				}
-				return sh.Run(path)
+				return Run(path, st)
 			}),
 		},
 	})
@@ -39,6 +35,14 @@ func NewShell(st *state.State) (*Shell, error) {
 	}
 
 	return &Shell{state: st, interp: i}, nil
+}
+
+func Run(path string, st *state.State) error {
+	sh, err := New(st)
+	if err != nil {
+		return err
+	}
+	return sh.Run(path)
 }
 
 func (sh *Shell) Run(path string) error {

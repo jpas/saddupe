@@ -1,4 +1,4 @@
-package internal
+package btmgmt
 
 import (
 	"bufio"
@@ -16,8 +16,8 @@ type Btmgmt struct {
 	index string
 }
 
-// NewBtmgmt constructs a btmgmt interface for a controller with a given address
-func NewBtmgmt(addr string) (*Btmgmt, error) {
+// New constructs a btmgmt interface for a controller with a given address
+func New(addr string) (*Btmgmt, error) {
 	var bt Btmgmt
 
 	if addr == "" {

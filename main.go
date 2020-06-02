@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/jpas/saddupe/shell"
@@ -30,13 +31,13 @@ func rootRun(cmd *cobra.Command, args []string) {
 		console = args[0]
 	}
 
-	st := state.NewState(state.Pro)
+	st := state.New(state.Pro)
 	dupe, err := NewBtDupe(st, console)
 	if err != nil {
 		fatal(err)
 	}
 
-	sh, err := shell.NewShell(st)
+	sh, err := shell.New(st)
 	if err != nil {
 		fatal(err)
 	}
@@ -50,6 +51,34 @@ func rootRun(cmd *cobra.Command, args []string) {
 		fatal(err)
 	}
 
+}
+
+var pairCmd = &cobra.Command{
+	Use:   "pair",
+	Short: "Pairs with a alternating device over Bluetooth",
+	Run:   pairRun,
+}
+
+func init() {
+	rootCmd.AddCommand(pairCmd)
+}
+
+func pairRun(cmd *cobra.Command, args []string) {
+	if os.Geteuid() != 0 {
+		fmt.Println("please run as root")
+		os.Exit(1)
+	}
+
+	if len(args) == 0 {
+		fatal(nil)
+	}
+
+	host := args[0]
+	console, err := Pair(host)
+	if err != nil {
+		fatal(err)
+	}
+	log.Printf("paired with %s", console)
 }
 
 func fatal(err error) {
