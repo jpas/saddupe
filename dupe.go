@@ -96,8 +96,8 @@ func (d *Dupe) Close() error {
 	return d.dev.Close()
 }
 
-func (d *Dupe) Started() {
-	<-d.started
+func (d *Dupe) Started() <-chan struct{} {
+	return d.started
 }
 
 func (d *Dupe) ticker() {

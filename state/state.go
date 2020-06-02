@@ -55,56 +55,57 @@ func New(t DeviceKind) *State {
 	return s
 }
 
-func (s *State) ButtonByName(name string) (*Button, error) {
-	var b *Button
+func (s *State) Buttons() map[string]*Button {
+	return map[string]*Button{
+		"y":          &s.Y,
+		"x":          &s.X,
+		"b":          &s.B,
+		"a":          &s.A,
+		"r":          &s.R,
+		"sr":         &s.SR,
+		"zr":         &s.ZR,
+		"l":          &s.L,
+		"sl":         &s.SL,
+		"zl":         &s.ZL,
+		"minus":      &s.Minus,
+		"plus":       &s.Plus,
+		"home":       &s.Home,
+		"capture":    &s.Capture,
+		"down":       &s.Down,
+		"up":         &s.Up,
+		"right":      &s.Right,
+		"left":       &s.Left,
+		"chargegrip": &s.ChargeGrip,
+		"leftstick":  &s.LeftStick.Button,
+		"rightstick": &s.RightStick.Button,
+	}
+}
 
+func (s *State) ButtonByName(name string) (*Button, error) {
 	switch strings.ToLower(name) {
-	case "y":
-		b = &s.Y
-	case "x":
-		b = &s.X
-	case "b":
-		b = &s.B
-	case "a":
-		b = &s.A
-	case "r":
-		b = &s.R
-	case "sr":
-		b = &s.SR
-	case "zr":
-		b = &s.ZR
-	case "l":
-		b = &s.L
-	case "sl":
-		b = &s.SL
-	case "zl":
-		b = &s.ZL
-	case "-", "minus":
-		b = &s.Minus
-	case "+", "plus":
-		b = &s.Plus
-	case "home":
-		b = &s.Home
-	case "capture":
-		b = &s.Capture
-	case "v", "down":
-		b = &s.Down
-	case "^", "up":
-		b = &s.Up
-	case ">", "right":
-		b = &s.Right
-	case "<", "left":
-		b = &s.Left
-	case "chargegrip":
-		b = &s.ChargeGrip
-	case "ls", "lstick", "leftstick":
-		b = &s.LeftStick.Button
-	case "rs", "rstick", "rightstick":
-		b = &s.RightStick.Button
-	default:
+	case "-":
+		name = "minus"
+	case "+":
+		name = "plus"
+	case "v":
+		name = "down"
+	case "^":
+		name = "up"
+	case "<":
+		name = "left"
+	case ">":
+		name = "right"
+	case "ls", "lstick":
+		name = "leftstick"
+	case "rs", "rstick":
+		name = "rightstick"
+	}
+
+	button, ok := s.Buttons()[name]
+	if !ok {
 		return nil, errors.New("unknown button")
 	}
-	return b, nil
+	return button, nil
 }
 
 func (s *State) StickByName(name string) (*Stick, error) {
