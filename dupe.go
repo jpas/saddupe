@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/jpas/saddupe/hid"
@@ -15,22 +16,23 @@ import (
 type Dupe struct {
 	dev   *hid.Device
 	state *state.State
-	tg    TaskGroup
+	done  chan struct{}
+
+	starter sync.Once
+	started chan struct{}
 }
 
-func NewDupe(dev *hid.Device) (*Dupe, error) {
+func NewDupe(state *state.State, dev *hid.Device) (*Dupe, error) {
 	d := &Dupe{
-		dev:   dev,
-		state: state.NewState(state.Pro),
-	}
-	if err := d.start(); err != nil {
-		dev.Close()
-		return nil, err
+		dev:     dev,
+		state:   state,
+		done:    make(chan struct{}),
+		started: make(chan struct{}),
 	}
 	return d, nil
 }
 
-func NewBtDupe(console string) (*Dupe, error) {
+func NewBtDupe(s *state.State, console string) (*Dupe, error) {
 	var dupe *Dupe
 	err := Retry(3, 500*time.Millisecond, func() error {
 		dev, err := hid.Dial("bt", console)
@@ -38,7 +40,7 @@ func NewBtDupe(console string) (*Dupe, error) {
 			return errors.Wrap(err, "unable to connect to console")
 		}
 
-		dupe, err = NewDupe(dev)
+		dupe, err = NewDupe(s, dev)
 		if err != nil {
 			return errors.Wrap(err, "failed to initialize device")
 		}
@@ -51,104 +53,78 @@ func NewBtDupe(console string) (*Dupe, error) {
 	return dupe, nil
 }
 
-func (d *Dupe) start() error {
-	d.tg.Add(d.ticker)
-	d.tg.Add(d.pusher)
-	d.tg.Add(d.receiver)
-	d.tg.Start()
-	// we might have early failure so wait a little bit to make sure everything is okay
-
-	select {
-	case <-d.Done():
-		return errors.Wrap(d.Err(), "early failure")
-	case <-time.After(1 * time.Second):
-		return nil
-	}
-}
-
 func (d *Dupe) State() *state.State {
 	return d.state
 }
 
-func (d *Dupe) Stop() error {
-	d.tg.Stop()
-	return d.Wait()
+func (d *Dupe) Run() error {
+	defer close(d.done)
+
+	go d.ticker()
+	go d.pusher()
+
+	for {
+		p, err := d.recv()
+		if errors.Is(err, hid.ErrDeviceClosed) {
+			return nil
+		}
+		if err != nil {
+			return errors.Wrap(err, "recv failed")
+		}
+
+		if p.Header() != hid.OutputReportHeader {
+			continue
+		}
+
+		p, err = d.handlePacket(p)
+		if err != nil {
+			log.Println("dupe:", errors.Wrap(err, "packet handler failed"))
+			continue
+		}
+
+		if p == nil {
+			continue
+		}
+		err = d.send(p)
+		if errors.Is(err, hid.ErrDeviceClosed) {
+			return nil
+		}
+	}
 }
 
-func (d *Dupe) Wait() error {
-	d.tg.Wait()
-	return d.tg.Err()
+func (d *Dupe) Close() error {
+	return d.dev.Close()
 }
 
-func (d *Dupe) Done() <-chan struct{} {
-	return d.tg.Done()
+func (d *Dupe) Started() {
+	<-d.started
 }
 
-func (d *Dupe) Err() error {
-	return d.tg.Err()
-}
-
-func (d *Dupe) ticker() error {
+func (d *Dupe) ticker() {
 	tick := time.NewTicker(time.Second / 240)
 	for {
 		select {
-		case <-d.tg.Done():
-			return nil
+		case <-d.done:
+			return
 		case <-tick.C:
 			d.state.Tick += 1
 		}
 	}
 }
 
-func (d *Dupe) pusher() error {
+func (d *Dupe) pusher() {
 	push := time.NewTicker(time.Second / 60)
 	for {
 		select {
-		case <-d.tg.Done():
-			return nil
+		case <-d.done:
+			return
 		case <-push.C:
 			p := &packet.StatePacket{State: *d.state}
 			if err := d.send(p); err != nil {
-				log.Println(errors.Wrap(err, "send failed"))
-				continue
-			}
-		}
-	}
-}
-
-func (d *Dupe) receiver() error {
-	recv := make(chan packet.Packet)
-	errc := make(chan error, 1)
-	go func() {
-		for {
-			select {
-			case <-d.tg.Done():
+				if !errors.Is(err, hid.ErrDeviceClosed) {
+					log.Println(errors.Wrap(err, "send failed"))
+				}
 				return
-			default:
-				p, err := d.recv()
-				if err != nil {
-					errc <- err
-					return
-				}
-				if p.Header() != hid.OutputReportHeader {
-					continue
-				}
-				recv <- p
-			}
-		}
-	}()
-
-	for {
-		select {
-		case <-d.tg.Done():
-			return nil
-		case err := <-errc:
-			return err
-		case p := <-recv:
-			err := d.handlePacket(p)
-			if err != nil {
-				log.Println("receiver:", errors.Wrap(err, "packet handler failed"))
-				continue
 			}
 		}
 	}
@@ -177,18 +153,21 @@ func (d *Dupe) recv() (packet.Packet, error) {
 	return p, nil
 }
 
-func (d *Dupe) handlePacket(p packet.Packet) error {
+func (d *Dupe) handlePacket(p packet.Packet) (packet.Packet, error) {
 	switch p := p.(type) {
 	case *packet.CmdPacket:
 		return d.handleCmd(p.Cmd)
 	case *packet.RumblePacket:
-		return nil
+		d.starter.Do(func() {
+			close(d.started)
+		})
+		return nil, nil
 	default:
-		return errors.Errorf("no packet handler for %s", reflect.TypeOf(p))
+		return nil, errors.Errorf("no packet handler for %s", reflect.TypeOf(p))
 	}
 }
 
-func (d *Dupe) handleCmd(c packet.Cmd) error {
+func (d *Dupe) handleCmd(c packet.Cmd) (packet.Packet, error) {
 	var r packet.Ret
 	var err error
 
@@ -211,12 +190,7 @@ func (d *Dupe) handleCmd(c packet.Cmd) error {
 		r = packet.NewRetAck(c.Op(), false)
 	}
 
-	p := &packet.RetPacket{State: *d.State(), Ret: r}
-	if err := d.send(p); err != nil {
-		log.Println(errors.Wrap(err, "send failed"))
-		return err
-	}
-	return nil
+	return &packet.RetPacket{State: *d.State(), Ret: r}, nil
 }
 
 func (d *Dupe) handleCmdAuxSetConfig(c packet.Cmd) (packet.Ret, error) {

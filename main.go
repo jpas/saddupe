@@ -1,10 +1,10 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
+	"github.com/jpas/saddupe/state"
 	"github.com/spf13/cobra"
 )
 
@@ -29,17 +29,26 @@ func rootRun(cmd *cobra.Command, args []string) {
 		console = args[0]
 	}
 
-	var sh *Shell
-
-	dupe, err := NewBtDupe(console)
+	st := state.NewState(state.Pro)
+	dupe, err := NewBtDupe(st, console)
 	if err != nil {
 		fatal(err)
 	}
 
-	sh = NewShell(dupe, os.Stdin, os.Stdout)
-	if err := sh.Run(); err != nil && !errors.Is(err, ErrShellExited) {
+	sh, err := NewShell(st, os.Stdin, os.Stdout)
+	if err != nil {
 		fatal(err)
 	}
+	go func() {
+		dupe.Started()
+		sh.REPL()
+		dupe.Close()
+	}()
+
+	if err := dupe.Run(); err != nil {
+		fatal(err)
+	}
+
 }
 
 func fatal(err error) {

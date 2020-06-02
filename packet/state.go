@@ -95,8 +95,15 @@ func encodeState(b []byte, s *state.State) error {
 		b[4] |= bit(5, s.SL.Held())
 	}
 
-	encodeStick(b[5:], &s.LeftStick, s.LeftStickCalibration())
-	encodeStick(b[8:], &s.RightStick, s.RightStickCalibration())
+	err := encodeStick(b[5:], &s.LeftStick, s.LeftStickCalibration())
+	if err != nil {
+		return err
+	}
+
+	err = encodeStick(b[8:], &s.RightStick, s.RightStickCalibration())
+	if err != nil {
+		return err
+	}
 
 	// TODO(jpas) Rumble report
 

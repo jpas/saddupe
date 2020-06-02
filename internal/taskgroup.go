@@ -47,9 +47,8 @@ func (tg *TaskGroup) Stop() {
 func (tg *TaskGroup) Wait() {
 	tg.wg.Wait()
 	for err := range tg.errc {
-		if err != nil {
+		if tg.err != nil && err != nil {
 			tg.err = err
-			break
 		}
 	}
 }

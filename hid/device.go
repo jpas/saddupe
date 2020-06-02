@@ -13,14 +13,19 @@ type Device struct {
 	interrupt io.ReadWriteCloser
 	local     hw.MAC
 	other     hw.MAC
+	ok        bool
 }
+
+var ErrDeviceClosed = errors.New("device closed")
 
 func NewDevice(control, interrupt io.ReadWriteCloser, localAddr hw.MAC, otherAddr hw.MAC) (*Device, error) {
-	return &Device{control, interrupt, localAddr, otherAddr}, nil
+	return &Device{control, interrupt, localAddr, otherAddr, true}, nil
 }
 
-func (d Device) Close() error {
+func (d *Device) Close() error {
 	var result error
+
+	d.ok = false
 
 	if err := d.interrupt.Close(); err != nil {
 		err = errors.Wrap(err, "interrupt close failed")
@@ -37,6 +42,10 @@ func (d Device) Close() error {
 
 // Ignore control channel for now, but might be needed later
 func (d Device) Read() (*Report, error) {
+	if !d.ok {
+		return nil, ErrDeviceClosed
+	}
+
 	var b [1024]byte // hopefully this is big enough
 	n, err := d.interrupt.Read(b[:])
 	if err != nil {
@@ -50,6 +59,10 @@ func (d Device) Read() (*Report, error) {
 }
 
 func (d Device) Write(r *Report) error {
+	if !d.ok {
+		return ErrDeviceClosed
+	}
+
 	_, err := d.interrupt.Write(r.Bytes())
 	return err
 }
