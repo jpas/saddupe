@@ -114,26 +114,59 @@ func decodeState(b []byte, s *state.State) error {
 	return errors.New("not implemented")
 }
 
-func encodeAxis(t float64, axis *state.AxisCalibration) uint16 {
+func translateRange(t, a, b, c, d float64, round func(float64) float64) float64 {
 	// [a, b] -> [c, d]
-	var a, b, c, d float64
+	if t < a {
+		return c
+	}
+	if t > b {
+		return d
+	}
+	return round(c + (d-c)/(b-a)*(t-a))
+}
 
-	// We want to round towards the center
-	var round func(float64) float64
-
+func encodeAxis(t float64, axis *state.AxisCalibration) uint16 {
+	var r float64
 	switch {
 	case t == 0:
 		return axis.Center
 	case t < 0:
-		a, b, c, d = -1, 0, float64(axis.Min), float64(axis.Center)
-		round = math.Ceil
+		r = translateRange(
+			t,
+			-1, 0,
+			float64(axis.Min), float64(axis.Center),
+			math.Ceil,
+		)
 	case t > 0:
-		a, b, c, d = 0, 1, float64(axis.Center), float64(axis.Max)
-		round = math.Floor
+		r = translateRange(
+			t,
+			0, 1,
+			float64(axis.Min), float64(axis.Center),
+			math.Floor,
+		)
 	}
-
-	r := round(c + (d-c)/(b-a)*(t-a))
 	return uint16(r) & 0x0fff
+}
+
+func decodeAxis(t uint16, axis *state.AxisCalibration) float64 {
+	var r float64
+	switch {
+	case t < axis.Center:
+		r = translateRange(
+			float64(t),
+			float64(axis.Min), float64(axis.Center),
+			-1, 0,
+			math.Ceil,
+		)
+	case t > axis.Center:
+		r = translateRange(
+			float64(t),
+			float64(axis.Center), float64(axis.Max),
+			0, 1,
+			math.Floor,
+		)
+	}
+	return r
 }
 
 func encodeStick(b []byte, s *state.Stick, c *state.StickCalibration) error {
