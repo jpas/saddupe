@@ -122,7 +122,11 @@ func translateRange(t, a, b, c, d float64, round func(float64) float64) float64 
 	if t > b {
 		return d
 	}
-	return round(c + (d-c)/(b-a)*(t-a))
+	v := c + (d-c)/(b-a)*(t-a)
+	if round == nil {
+		return v
+	}
+	return round(v)
 }
 
 func encodeAxis(t float64, axis *state.AxisCalibration) uint16 {
@@ -156,14 +160,14 @@ func decodeAxis(t uint16, axis *state.AxisCalibration) float64 {
 			float64(t),
 			float64(axis.Min), float64(axis.Center),
 			-1, 0,
-			math.Ceil,
+			nil,
 		)
 	case t > axis.Center:
 		r = translateRange(
 			float64(t),
 			float64(axis.Center), float64(axis.Max),
 			0, 1,
-			math.Floor,
+			nil,
 		)
 	}
 	return r
